@@ -1,0 +1,37 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+out/
+dist/
+build/
+
+# logs
+*.log
+npm-debug.log*
+
+# local database (SQLite)
+api/data/
+*.db
+*.db-journal
+
+# environment & secrets (never commit!)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# supabase / tokens / keys — safety net
+supabase/.env
+*supabase*key*
+*service_role*
+*sb_key*
+*.pem
+*.key
+*.secret
+
+# OS
+.DS_Store
+Thumbs.db
