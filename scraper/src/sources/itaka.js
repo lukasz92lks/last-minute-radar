@@ -7,6 +7,7 @@ const {
   extractDeparture,
   extractMeal,
   extractDateRange,
+  normalizeCountry,
 } = require('../parse');
 
 const NAME = 'itaka';
@@ -40,7 +41,10 @@ async function scrapeItaka() {
         const href = a.getAttribute('href') || '';
         if (!text || !href || seen.has(href)) continue;
         seen.add(href);
-        results.push({ text, href });
+        const img = tile.querySelector('img');
+        const imgSrc = img?.getAttribute('src') || img?.getAttribute('data-src') || null;
+        const stars = tile.querySelectorAll('i.icon-shape-star, [class*="star"]').length;
+        results.push({ text, href, imgSrc, stars });
       }
       return results;
     });
@@ -49,7 +53,10 @@ async function scrapeItaka() {
       const tx = t.text;
       // destination: text before the word "Hotel"
       const destMatch = tx.match(/^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż ,-]+?)\s+Hotel\s/i);
-      let destination = destMatch ? destMatch[1].trim() : '';
+      // fallback: leading "City, Region" before any other info
+      const destMeta = tx.match(/^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż ,.\-]+?),?\s*Hotel/i)
+        || tx.match(/^([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż][A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż ,.-]+?)\s+\d\.\d\s*\/\s*6/i);
+      let destination = destMatch ? destMatch[1].trim() : (destMeta ? destMeta[1].trim() : '');
 
       // hotel name: right after "Hotel " up to rating/dates
       const hotelMatch = tx.match(
@@ -64,6 +71,9 @@ async function scrapeItaka() {
         source_id: t.href,
         hotel_name: hotelName,
         destination,
+        country: normalizeCountry(destination.split(',')[0].trim()),
+        image_url: t.imgSrc || null,
+        stars: t.stars > 0 ? t.stars : null,
         departure_city: extractDeparture(tx),
         price_per_person: normalizeNumber(extractPrice(tx)),
         currency: 'PLN',

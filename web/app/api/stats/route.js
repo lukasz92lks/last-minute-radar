@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const client = supabase();
@@ -28,12 +31,15 @@ export async function GET() {
       .limit(1)
       .maybeSingle();
 
-    return NextResponse.json({
-      total: total || 0,
-      avg_price: avg,
-      min_price: min,
-      updated_at: updatedRow ? updatedRow.last_seen_at : null,
-    });
+    return NextResponse.json(
+      {
+        total: total || 0,
+        avg_price: avg,
+        min_price: min,
+        updated_at: updatedRow ? updatedRow.last_seen_at : null,
+      },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

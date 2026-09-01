@@ -38,3 +38,6 @@ Thumbs.db
 
 .vercel
 .env*
+
+# diagnostic scripts
+probes/

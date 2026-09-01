@@ -1,4 +1,5 @@
-const { newContext, acceptCookies, scrollToLoad, normalizeNumber } = require('../helpers');
+const { newContext, acceptCookies, scrollToLoad, normalizeNumber, fetchHotelStars } = require('../helpers');
+const { fetchStarsMap } = require('../../../api/src/db');
 const {
   extractPrice,
   extractReviews,
@@ -6,6 +7,7 @@ const {
   extractDeparture,
   extractMeal,
   extractDateRange,
+  normalizeCountry,
 } = require('../parse');
 
 const NAME = 'tui';
@@ -54,7 +56,9 @@ async function scrapeSingleDestination(page, url) {
       const title = tile.querySelector('h2, h3, [class*="title"]')?.innerText?.trim() || '';
       const priceEl = tile.querySelector('[class*="price"], [class*="Price"]');
       const priceText = priceEl ? priceEl.innerText.replace(/\s+/g, ' ').trim() : '';
-      out.push({ title, href, text, priceText });
+      const imgEl = tile.querySelector('img');
+      const imgSrc = imgEl?.getAttribute('src') || imgEl?.getAttribute('data-src') || imgEl?.getAttribute('data-lazy') || null;
+      out.push({ title, href, text, priceText, imgSrc });
     });
     return out;
   });
@@ -81,6 +85,9 @@ async function scrapeSingleDestination(page, url) {
       source_id: sid,
       hotel_name: hotelName,
       destination: (url.split('/')[4] || null),
+      country: normalizeCountry(url.split('/')[4] || null),
+      image_url: t.imgSrc || null,
+      stars: null, // filled below from detail page (deduped per hotel)
       departure_city: extractDeparture(tx),
       price_per_person: priceStr ? normalizeNumber(priceStr) : null,
       currency: 'PLN',
@@ -97,6 +104,50 @@ async function scrapeSingleDestination(page, url) {
       description: tx,
       raw: JSON.stringify(t),
     });
+  }
+
+  // Fill stars: prefer preloaded DB map (fast); fetch detail page only for new hotels.
+  let knownStars = globalThis.__starsMap;
+  if (!knownStars) {
+    globalThis.__starsMap = await fetchStarsMap().catch(() => new Map());
+    knownStars = globalThis.__starsMap;
+  }
+  const starsByHotel = new Map();
+  const imgsByHotel = new Map();
+  for (const r of result) {
+    const cached = knownStars.get(`${NAME}|${r.hotel_name}`);
+    if (cached) {
+      r.stars = cached;
+    } else if (!r.url || r.url === url) {
+      r.stars = null;
+    } else {
+      if (!starsByHotel.has(r.hotel_name)) {
+        starsByHotel.set(r.hotel_name, await fetchHotelStars(page, NAME, r.url));
+      }
+      r.stars = starsByHotel.get(r.hotel_name);
+    }
+
+    // Repair missing image_url from the detail page (og:image / first CDN image).
+    if (!r.image_url && r.url && r.url !== url) {
+      if (!imgsByHotel.has(r.hotel_name)) {
+        let img = null;
+        try {
+          await page.goto(r.url, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+          await page.waitForTimeout(1000);
+          await acceptCookies(page);
+          await page.waitForTimeout(400);
+          img = await page.evaluate(() => {
+            const og = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+            if (og && /^https?:/.test(og)) return og;
+            const el = document.querySelector('img[src*="redgalaxy"], img[src*="tui"], img[src*="cdn"]');
+            const src = el?.getAttribute('src') || el?.getAttribute('data-src');
+            return src && /^https?:/.test(src) ? src : null;
+          });
+        } catch { img = null; }
+        imgsByHotel.set(r.hotel_name, img);
+      }
+      r.image_url = imgsByHotel.get(r.hotel_name);
+    }
   }
   return result;
 }

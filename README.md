@@ -29,6 +29,7 @@ przez **Route Handlers** działające na **Vercel**.
 │       └── sources/
 │           ├── itaka.js
 │           ├── tui.js
+│           ├── rainbow.js
 │           └── wakacje.js   # opcjonalne (patrz niżej)
 ├── api/               # Express API (opcjonalne, developerskie)
 │   └── src/
@@ -36,10 +37,11 @@ przez **Route Handlers** działające na **Vercel**.
 │       └── db.js          # klient + upsert Supabase
 ├── web/               # Next.js (frontend + Route Handlers API)
 │   ├── app/
-│   │   ├── page.js            # strona główna
+│   │   ├── page.js            # strona główna (karty, filtry, oferta dnia)
 │   │   └── api/               # API (route handlers)
 │   │       ├── offers/route.js
 │   │       ├── offers/[id]/route.js
+│   │       ├── filters/route.js
 │   │       ├── sources/route.js
 │   │       └── stats/route.js
 │   └── lib/supabase.js        # klient Supabase (lazy)
@@ -78,17 +80,35 @@ Uruchomi scraper, a następnie będzie aktualizował oferty **co 30 minut** auto
 Na produkcji scraper nie działa na Vercel (serverless) — uruchamiaj go lokalnie lub przez
 cron (np. GitHub Actions / osobny serwer).
 
+### Automatyczne odświeżanie: GitHub Actions
+
+W repo znajduje się `.github/workflows/scrape.yml` — uruchamia scraper co 30 minut
+(`*/30 * * * *`) i zapisuje oferty do Supabase. Wymagane sekrety w repo (Settings → Secrets → Actions):
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+
+Po każdym scrapie oferty, które **nie pojawiły się w listingu od ponad 6 godzin**, są
+automatycznie usuwane z bazy (`pruneOffers`), dzięki czemu tabela nie rośnie w nieskończoność.
+
+### Zasilanie gwiazdek
+
+- **TUI** — gwiazdki tylko na stronie oferty (`#__NEXT_DATA__`); scraper pobiera je z cache w bazie
+  (klucz `source|hotel_name`), a dla nowych hoteli odwiedza stronę szczegółów.
+- **Rainbow** — gwiazdki z sekcji „Kategoria lokalna” (znaki `*` lub słownie, np. „Trzy klucze”).
+  Zdjęcia Rainbow są lazy-loadowane — scraper scrolluje stronę, zanim pobierze `src` kafelków.
+
 ## API (Route Handlers, na Vercel bez Build Config)
 
 | Endpoint              | Opis                                          |
 |-----------------------|-----------------------------------------------|
 | `GET /api/offers`      | Lista ofert (filtrowanie, sortowanie, paginacja) |
 | `GET /api/offers/:id`  | Pojedyncza oferta                             |
+| `GET /api/filters`     | Unikalne kraje, wyżywienia i źródła do filtrów |
 | `GET /api/sources`     | Statystyki per biuro podróży                  |
 | `GET /api/stats`       | Ogólne statystyki                             |
 
 Parametry `GET /api/offers`:
-`?source=tui&q=hotel&destination=...&max_price=2000&min_rating=7&sort=price|rating|newest&order=asc|desc&limit=100&offset=0`
+`?source=tui&q=hotel&destination=...&country=Grecja&meal_plan=all inclusive&min_stars=4&nights_min=5&nights_max=8&max_price=2000&min_rating=7&sort=price|rating|newest&order=asc|desc&limit=100&offset=0`
 
 ## Jak to działa
 
@@ -115,8 +135,13 @@ Parametry `GET /api/offers`:
 
 ## Źródła i znane ograniczenia
 
-- **ITAKA** — działa stabilnie.
-- **TUI** — działa stabilnie (oferty per destynacja z menu Last Minute).
+- **ITAKA** — działa stabilnie; gwiazdki hotelu i zdjęcie z kafelka.
+- **TUI** — działa stabilnie (oferty per destynacja z menu Last Minute); zdjęcie z kafelka.
+  Gwiazdki hotelu pobierane ze strony oferty (`#__NEXT_DATA__` → `"stars":N`), korzystając
+  z cache w bazie (dla nowych hoteli realizowane przez wizytę na stronie szczegółów).
+- **Rainbow (r.pl)** — pełna lista przez paginację `?strona=N` (limit ~30 stron); zdjęcie i ocena
+  gości z karty. Gwiazdki hotelu pobierane ze strony oferty jako sekcja **"Kategoria lokalna"**
+  (liczba `*` jak `***` = 3, a słownie np. „Trzy klucze”), również z cache w bazie.
 - **Wakacje.pl** — mocna ochrona anty-bot, bywa niestabilna. **Domyślnie wyłączona**:
 
   ```bash

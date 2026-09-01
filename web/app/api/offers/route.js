@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const source = searchParams.get('source') || null;
   const q = searchParams.get('q') || null;
   const destination = searchParams.get('destination') || null;
+  const country = searchParams.get('country') || null;
+  const meal_plan = searchParams.get('meal_plan') || null;
+  const min_stars = searchParams.get('min_stars') || null;
+  const nights_min = searchParams.get('nights_min') || null;
+  const nights_max = searchParams.get('nights_max') || null;
   const max_price = searchParams.get('max_price') || null;
   const min_rating = searchParams.get('min_rating') || null;
   const sort = searchParams.get('sort') || 'price';
@@ -20,6 +28,11 @@ export async function GET(req) {
     if (source) query = query.eq('source', source);
     if (q) query = query.ilike('hotel_name', `%${q}%`);
     if (destination) query = query.ilike('destination', `%${destination}%`);
+    if (country) query = query.eq('country', country);
+    if (meal_plan) query = query.ilike('meal_plan', `%${meal_plan}%`);
+    if (min_stars) query = query.gte('stars', parseInt(min_stars, 10));
+    if (nights_min) query = query.gte('nights', parseInt(nights_min, 10));
+    if (nights_max) query = query.lte('nights', parseInt(nights_max, 10));
     if (max_price) query = query.lte('price_per_person', parseInt(max_price, 10));
     if (min_rating) query = query.gte('rating', parseFloat(min_rating));
 
@@ -32,7 +45,10 @@ export async function GET(req) {
     const { data, count, error } = await query;
     if (error) throw error;
 
-    return NextResponse.json({ offers: data || [], total: count || 0 });
+    return NextResponse.json(
+      { offers: data || [], total: count || 0 },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

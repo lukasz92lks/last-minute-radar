@@ -50,7 +50,18 @@ function extractDeparture(text) {
   return m ? m[1] : null;
 }
 
-const MEALS = 'all inclusive|śniadania i obiadokolacje|śniadanie|2 posiłki|bez wyżywienia|half board|full board|bed and breakfast|śniadania i kolacje';
+// Map country names (TUI uses URL slugs) to a canonical Polish display name.
+const COUNTRY_MAP = {
+  'turcja': 'Turcja', 'grecja': 'Grecja', 'hiszpania': 'Hiszpania', 'majorka': 'Hiszpania',
+  'egipt': 'Egipt', 'bulgaria': 'Bułgaria', 'wyspy kanaryjskie': 'Wyspy Kanaryjskie',
+  'wyspy-kanaryjskie': 'Wyspy Kanaryjskie', 'cypr': 'Cypr', 'tunezja': 'Tunezja',
+};
+function normalizeCountry(c) {
+  if (!c) return null;
+  const key = String(c).trim().toLowerCase();
+  return COUNTRY_MAP[key] || String(c).trim() || null;
+}
+const MEALS = 'all inclusive|śniadania i obiadokolacje|śniadanie i obiadokolacja|śniadania i obiadokolacja|śniadanie|3 posiłki|2 posiłki|bez wyżywienia|half board|full board|bed and breakfast|śniadania i kolacje|śniadania i kolacja';
 function extractMeal(text) {
   const m = text.match(new RegExp(MEALS, 'i'));
   return m ? m[0] : null;
@@ -85,4 +96,5 @@ module.exports = {
   extractDeparture,
   extractMeal,
   extractDateRange,
+  normalizeCountry,
 };

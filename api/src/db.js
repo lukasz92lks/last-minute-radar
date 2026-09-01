@@ -26,10 +26,18 @@ function normalizeDate(str) {
 }
 
 // upsert an offer (natural key = source + source_id)
+// When a scrape cannot determine stars (null) we omit the field so the upsert
+// does not overwrite stars already known from the backfill/detail pages.
+function scrubOffer(row) {
+  const out = { ...row };
+  if (out.stars == null) delete out.stars;
+  return out;
+}
+
 async function upsertOffer(offer) {
   const client = supabase();
   const now = new Date().toISOString();
-  const row = { ...offer, first_seen_at: now, last_seen_at: now };
+  const row = { ...scrubOffer(offer), first_seen_at: now, last_seen_at: now };
 
   const { error } = await client
     .from('offers')
@@ -44,7 +52,7 @@ async function upsertOffers(offers) {
   if (!offers.length) return 0;
   const client = supabase();
   const now = new Date().toISOString();
-  const rows = offers.map((o) => ({ ...o, first_seen_at: now, last_seen_at: now }));
+  const rows = offers.map((o) => ({ ...scrubOffer(o), first_seen_at: now, last_seen_at: now }));
 
   const { error } = await client
     .from('offers')
@@ -54,4 +62,32 @@ async function upsertOffers(offers) {
   return rows.length;
 }
 
-module.exports = { supabase, upsertOffer, upsertOffers, normalizeNumber, normalizeDate };
+// Preload known stars per (source, hotel_name) so scrapers can reuse them
+// without re-visiting every detail page.
+async function fetchStarsMap() {
+  const client = supabase();
+  const { data, error } = await client
+    .from('offers')
+    .select('source, hotel_name, stars')
+    .not('stars', 'is', null);
+  if (error) throw new Error(`Supabase fetchStarsMap: ${error.message}`);
+  const map = new Map();
+  for (const r of data || []) map.set(`${r.source}|${r.hotel_name}`, r.stars);
+  return map;
+}
+
+// Remove offers that have not been seen during the last scrape cycle (they have
+// disappeared from the listings). Keeps the table from growing with stale rows.
+async function pruneOffers(sources, maxStaleHours = 6) {
+  const client = supabase();
+  const cutoff = new Date(Date.now() - maxStaleHours * 3600 * 1000).toISOString();
+  const { count, error } = await client
+    .from('offers')
+    .delete({ count: 'exact' })
+    .in('source', sources)
+    .lt('last_seen_at', cutoff);
+  if (error) throw new Error(`Supabase prune: ${error.message}`);
+  return count || 0;
+}
+
+module.exports = { supabase, upsertOffer, upsertOffers, normalizeNumber, normalizeDate, fetchStarsMap, pruneOffers };

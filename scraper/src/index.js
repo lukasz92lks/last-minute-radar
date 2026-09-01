@@ -1,14 +1,16 @@
 const cron = require('node-cron');
-const { upsertOffers } = require('../../api/src/db');
+const { upsertOffers, pruneOffers } = require('../../api/src/db');
 const { scrapeItaka } = require('./sources/itaka');
 const { scrapeTui } = require('./sources/tui');
+const { scrapeRainbow } = require('./sources/rainbow');
 const { scrapeWakacje } = require('./sources/wakacje');
 
 // Wakacje.pl is behind heavy anti-bot protection and can occasionally hang / rate-limit.
 // It's opt-in via SCRAPE_WAKACJE=1 so it can never take down the production pipeline.
 const SOURCES = [
   { name: 'itaka', run: scrapeItaka, timeoutMs: 180000 },
-  { name: 'tui', run: scrapeTui, timeoutMs: 300000 },
+  { name: 'tui', run: scrapeTui, timeoutMs: 600000 },
+  { name: 'rainbow', run: scrapeRainbow, timeoutMs: 600000 },
 ];
 if (process.env.SCRAPE_WAKACJE === '1') {
   SOURCES.push({ name: 'wakacje', run: scrapeWakacje, timeoutMs: 480000 });
@@ -35,6 +37,10 @@ async function runAll() {
       const n = await upsertOffers(offers);
       total += n;
       console.log(`[${src.name}] zapisano ${n} ofert`);
+      // Remove offers from this source that are no longer in the listings
+      // (not seen within the last 6h).
+      const pruned = await pruneOffers([src.name], 6);
+      if (pruned) console.log(`[${src.name}] usunięto ${pruned} nieaktualnych ofert`);
     } catch (e) {
       console.error(`[${src.name}] BŁĄD:`, e.message);
     }

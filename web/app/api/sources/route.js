@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase';
 
-const SOURCES = ['tui', 'itaka', 'wakacje'];
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const SOURCES = ['tui', 'itaka', 'rainbow', 'wakacje'];
 
 export async function GET() {
   try {
@@ -39,7 +42,7 @@ export async function GET() {
         last_seen: lastRow ? lastRow.last_seen_at : null,
       });
     }
-    return NextResponse.json({ sources });
+    return NextResponse.json({ sources }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
