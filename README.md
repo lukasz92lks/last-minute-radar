@@ -1,16 +1,21 @@
 # Last Minute Radar
 
-Porównywarka ofert **last minute** z polskich biur podróży. Scraper (Playwright) zbiera oferty,
-zapisuje do bazy SQLite, a frontend (Next.js) wyświetla je przez API (Express).
+Porównywarka ofert **last minute** z polskich biur podróży. Scraper (Playwright) zbiera oferty i
+zapisuje je do bazy **Supabase (PostgreSQL)**, a przeglądarkowy frontend (Next.js) wyświetla je
+przez **Route Handlers** działające na **Vercel**.
 
 ## Stack
 
 | Warstwa  | Technologia                                             |
 |----------|---------------------------------------------------------|
 | Scraper  | Node.js + Playwright (headless Chrome)                  |
-| Baza     | SQLite (better-sqlite3)                                 |
-| API      | Express                                                 |
+| Baza     | Supabase (PostgreSQL) — tabela `offers`                 |
+| API      | Next.js Route Handlers (`web/app/api/*`)                |
 | Frontend | Next.js (App Router), czysty klient odpytujący własne API |
+| Hosting  | Vercel (frontend + API), prywatne repo na GitHub         |
+
+> Lokalny serwer Express (`api/`) pozostaje jako opcjonalne narzędzie developerskie.
+> Na Vercel API obsługują natywne Route Handlers.
 
 ## Struktura
 
@@ -25,12 +30,20 @@ zapisuje do bazy SQLite, a frontend (Next.js) wyświetla je przez API (Express).
 │           ├── itaka.js
 │           ├── tui.js
 │           └── wakacje.js   # opcjonalne (patrz niżej)
-├── api/               # Express + SQLite
+├── api/               # Express API (opcjonalne, developerskie)
 │   └── src/
-│       ├── index.js       # endpointy REST
-│       ├── db.js          # schema + upsert ofert
-│       └── config.js
-├── web/               # Next.js frontend
+│       ├── index.js       # endpointy REST (eksport „app" bez listen)
+│       └── db.js          # klient + upsert Supabase
+├── web/               # Next.js (frontend + Route Handlers API)
+│   ├── app/
+│   │   ├── page.js            # strona główna
+│   │   └── api/               # API (route handlers)
+│   │       ├── offers/route.js
+│   │       ├── offers/[id]/route.js
+│   │       ├── sources/route.js
+│   │       └── stats/route.js
+│   └── lib/supabase.js        # klient Supabase (lazy)
+├── supabase/migration.sql # schema bazy
 └── package.json       # workspace + skrypty
 ```
 
@@ -43,27 +56,29 @@ npm install
 # 2. Zainstaluj przeglądarkę Chromium dla Playwright (wymagane raz)
 npx playwright install chromium
 
-# 3. Uruchom scraper jednorazowo (zbierze świeże oferty do bazy)
+# 3. Skonfiguruj zmienne środowiskowe (Supabase token)
+#    Skopiuj .env.example i uzupełnij SUPABASE_URL + SUPABASE_SERVICE_KEY
+
+# 4. Uruchom scraper jednorazowo (zbierze oferty do Supabase)
 npm run scrape:once
 
-# 4. Uruchom API (http://localhost:4000) w osobnym terminalu
-npm run api
-
-# 5. Uruchom frontend (http://localhost:3000) w osobnym terminalu
+# 5. Uruchom frontend + API (http://localhost:3000)
 npm run web
 ```
 
-Alternatywnie `npm run dev` uruchamia API i web w jednym (odtwarzaj oba w rożnych terminalach,
-bo używają `&&`).
+Alternatywnie `npm run dev` uruchamia web oraz lokalny API Express (jeśli go potrzebujesz).
 
 ### Tryb ciągły (CRON)
 
 ```bash
 npm run scrape
 ```
-Uruchomi scraper, a następnie będzie pobierał oferty **co 30 minut** automatycznie.
 
-## API
+Uruchomi scraper, a następnie będzie aktualizował oferty **co 30 minut** automatycznie.
+Na produkcji scraper nie działa na Vercel (serverless) — uruchamiaj go lokalnie lub przez
+cron (np. GitHub Actions / osobny serwer).
+
+## API (Route Handlers, na Vercel bez Build Config)
 
 | Endpoint              | Opis                                          |
 |-----------------------|-----------------------------------------------|
@@ -73,25 +88,36 @@ Uruchomi scraper, a następnie będzie pobierał oferty **co 30 minut** automaty
 | `GET /api/stats`       | Ogólne statystyki                             |
 
 Parametry `GET /api/offers`:
-`?source=tui&q=hotel&destination=...&max_price=2000&min_rating=7&sort=price|rating|newest&order=asc|desc&limit=100&offset=0&fresh_for=48`
+`?source=tui&q=hotel&destination=...&max_price=2000&min_rating=7&sort=price|rating|newest&order=asc|desc&limit=100&offset=0`
 
 ## Jak to działa
 
-1. **Uruchomienie scrapera** → Playwright otwiera headless Chrome i wchodzi na strony biur podróży,
+1. **Scraper (lokalnie/CI)** → Playwright otwiera headless Chrome i wchodzi na strony biur podróży,
    akceptuje cookies, przewija stronę, by wymusić lazy-loading kafelków.
-2. **Ekstrakcja** → z każdego kafelka wyciągane są: nazwa hotelu, destynacja, cena za osobę,
-   terminy, liczba nocy, miasto wylotu, wyżywienie, ocena i liczba opinii.
-3. **Zapis** → oferty upsertowane do SQLite (klucz naturalny `source + source_id`), więc
+2. **Ekstrakcja** → nazwa hotelu, destynacja, cena za osobę, terminy, liczba nocy, miasto wylotu,
+   wyżywienie, ocena i liczba opinii.
+3. **Zapis** → oferty upsertowane do Supabase (klucz naturalny `source + source_id`), więc
    wielokrotne uruchomienia nie tworzą duplikatów.
-4. **API** → frontend odpytuje wyłącznie Twoją własną bazę (błyskawicznie, bez obciążania biur).
-5. **CRON** → świeży kontakt co 30 minut.
+4. **Vercel** → frontend (Next.js) odpytywa własne Route Handlers (`/api/*`), które czytają
+   z Supabase. Wszystko w jednym origin — bez CORS i bez proxy.
+5. **CRON (lokalny/CI)** → świeży kontakt co 30 minut.
+
+## Zmienne środowiskowe
+
+| Zmienna                 | Gdzie potrzebna                     | Uwagi |
+|-------------------------|-------------------------------------|-------|
+| `SUPABASE_URL`          | scraper, Vercel (Route Handlers)   | URL projektu |
+| `SUPABASE_SERVICE_KEY`  | scraper (writes), Vercel (reads)   | service_role = pełny dostęp; anon wystarcza do odczytu |
+
+> **Nie komituj** sekretów. `.env`, `*.local` i pliki z kluczami są w `.gitignore`.
+> Na Vercel ustaw `SUPABASE_URL` oraz `SUPABASE_SERVICE_KEY` w **Environment Variables**
+> (Settings → Environment Variables).
 
 ## Źródła i znane ograniczenia
 
-- **ITAKA** — działa stabilnie. Dużo czystych danych (ceny „/os.", terminy, oceny).
-- **TUI** — działa stabilnie. Oferty per destynacja z menu Last Minute.
-- **Wakacje.pl** — ma bardzo mocną ochronę anty-bot (party znajduje się w `sources/wakacje.js`),
-  bywa niestabilna i potrafi zablokować/zwolnić żądania. **Domyślnie wyłączona**. Aby włączyć:
+- **ITAKA** — działa stabilnie.
+- **TUI** — działa stabilnie (oferty per destynacja z menu Last Minute).
+- **Wakacje.pl** — mocna ochrona anty-bot, bywa niestabilna. **Domyślnie wyłączona**:
 
   ```bash
   SCRAPE_WAKACJE=1 node scraper/src/index.js --once
@@ -99,15 +125,14 @@ Parametry `GET /api/offers`:
 
 ### Uwagi prawne / etyczne
 
-- Scraper pobiera dane publicznie dostępne na stronach biur podróży. **Nie obchodź** captcha,
-  nie przeciążaj serwerów i szanuj `robots.txt`.
+- Scraper pobiera dane publicznie dostępne. **Nie obchodź** captcha, nie przeciążaj serwerów,
+  szanuj `robots.txt`.
 - Ceny zmieniają się — zawsze sprawdzaj finalną cenę na stronie biura przed rezerwacją.
-- Używaj własnych danych (własna baza) — to główna zaleta tego rozwiązania.
 
 ## Rozwój (pomysły na next)
 
+- Grupowe scrapowanie w cronie CI (np. GitHub Actions co godzinę).
 - Obsługa kolejnych biur (Rainbow, Coral Travel, Nexter, Exim).
-- Monitorowanie spadków cen (powiadomienia e-mail/push).
-- Historia cen w czasie dla każdej oferty.
+- Monitoring spadków cen (powiadomienia e-mail/push).
+- Historia cen w czasie.
 - User accounts + ulubione.
-- Filtr po państwie/miejscowości z mapy.

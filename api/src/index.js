@@ -144,7 +144,11 @@ app.get('/api/stats', async (_req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`API działa na http://localhost:${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`API działa na http://localhost:${PORT}`);
+  });
+}
