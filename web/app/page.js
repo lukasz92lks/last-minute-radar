@@ -58,7 +58,7 @@ export default function Home() {
             <span className="last">Last Minute</span> <span className="radar">Radar</span>
           </div>
           <div className="subtitle">
-            Oferty z polskich biur podróży zebrane w jedno miejsce.
+            Oferty z polskich biur podróży zebrane w jedno miejsce. Auto-deploy z GitHub.
           </div>
         </div>
       </header>
