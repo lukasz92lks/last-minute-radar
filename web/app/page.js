@@ -75,7 +75,7 @@ function OfferCard({ o, compact }) {
 export default function Home() {
   const [offers, setOffers] = useState([]);
   const [stats, setStats] = useState(null);
-  const [filters, setFilters] = useState({ countries: [], meal_plans: [], sources: [] });
+  const [filters, setFilters] = useState({ countries: [], meal_plans: [], sources: [], departure_cities: [] });
   const [dealOfDay, setDealOfDay] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,6 +85,7 @@ export default function Home() {
   const [source, setSource] = useState('');
   const [country, setCountry] = useState('');
   const [mealPlan, setMealPlan] = useState('');
+  const [departureCity, setDepartureCity] = useState('');
   const [minStars, setMinStars] = useState('');
   const [nightsMin, setNightsMin] = useState('');
   const [nightsMax, setNightsMax] = useState('');
@@ -101,6 +102,7 @@ export default function Home() {
       if (source) params.set('source', source);
       if (country) params.set('country', country);
       if (mealPlan) params.set('meal_plan', mealPlan);
+      if (departureCity) params.set('departure_city', departureCity);
       if (minStars) params.set('min_stars', minStars);
       if (nightsMin) params.set('nights_min', nightsMin);
       if (nightsMax) params.set('nights_max', nightsMax);
@@ -118,13 +120,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [query, source, country, mealPlan, minStars, nightsMin, nightsMax, maxPrice, sort, order]);
+  }, [query, source, country, mealPlan, departureCity, minStars, nightsMin, nightsMax, maxPrice, sort, order]);
 
   const clearFilters = useCallback(() => {
     setQuery('');
     setSource('');
     setCountry('');
     setMealPlan('');
+    setDepartureCity('');
     setMinStars('');
     setNightsMin('');
     setNightsMax('');
@@ -201,6 +204,12 @@ export default function Home() {
           <option value="3">3★ lub więcej</option>
           <option value="4">4★ lub więcej</option>
           <option value="5">5★</option>
+        </select>
+        <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)}>
+          <option value="">Wszystkie lotniska</option>
+          {filters.departure_cities.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
         </select>
         <input
           placeholder="Min. nocy"

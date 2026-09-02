@@ -5,16 +5,12 @@ const { scrapeTui } = require('./sources/tui');
 const { scrapeRainbow } = require('./sources/rainbow');
 const { scrapeWakacje } = require('./sources/wakacje');
 
-// Wakacje.pl is behind heavy anti-bot protection and can occasionally hang / rate-limit.
-// It's opt-in via SCRAPE_WAKACJE=1 so it can never take down the production pipeline.
 const SOURCES = [
   { name: 'itaka', run: scrapeItaka, timeoutMs: 180000 },
   { name: 'tui', run: scrapeTui, timeoutMs: 600000 },
   { name: 'rainbow', run: scrapeRainbow, timeoutMs: 600000 },
+  { name: 'wakacje', run: scrapeWakacje, timeoutMs: 480000 },
 ];
-if (process.env.SCRAPE_WAKACJE === '1') {
-  SOURCES.push({ name: 'wakacje', run: scrapeWakacje, timeoutMs: 480000 });
-}
 
 function withTimeout(fn, ms) {
   return Promise.race([

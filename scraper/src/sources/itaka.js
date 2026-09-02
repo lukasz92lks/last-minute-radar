@@ -8,6 +8,7 @@ const {
   extractMeal,
   extractDateRange,
   normalizeCountry,
+  normalizeMeal,
 } = require('../parse');
 
 const NAME = 'itaka';
@@ -81,7 +82,7 @@ async function scrapeItaka() {
         start_date: startISO,
         end_date: endISO,
         nights: normalizeNumber(extractNights(tx)),
-        meal_plan: extractMeal(tx),
+        meal_plan: normalizeMeal(extractMeal(tx)),
         rating: (tx.match(/(\d(?:\.\d)?)\s*\/\s*6/) || [])[1]
           ? parseFloat(tx.match(/(\d(?:\.\d)?)\s*\/\s*6/)[1])
           : null,

@@ -6,6 +6,7 @@ const {
   extractReviews,
   extractMeal,
   normalizeCountry,
+  normalizeMeal,
 } = require('../parse');
 
 const NAME = 'rainbow';
@@ -151,7 +152,7 @@ function parseCard(c) {
     start_date: startISO,
     end_date: endISO,
     nights: nightsMatch ? normalizeNumber(nightsMatch[1]) : null,
-    meal_plan: extractMeal(tx),
+    meal_plan: normalizeMeal(extractMeal(tx)),
     rating: (tx.match(/(\d(?:[.,]\d)?)\s*\/\s*6/) || [])[1]
       ? parseFloat(tx.match(/(\d(?:[.,]\d)?)\s*\/\s*6/)[1].replace(',', '.'))
       : null,

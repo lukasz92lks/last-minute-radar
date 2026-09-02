@@ -67,6 +67,28 @@ function extractMeal(text) {
   return m ? m[0] : null;
 }
 
+// Normalize meal_plan to canonical lowercase form.
+const MEAL_ALIASES = {
+  'śniadania i obiadokolacje': 'śniadania i obiadokolacje',
+  'śniadanie i obiadokolacja': 'śniadania i obiadokolacje',
+  'śniadania i obiadokolacja': 'śniadania i obiadokolacje',
+  'śniadania i kolacje': 'śniadania i obiadokolacje',
+  'śniadania i kolacja': 'śniadania i obiadokolacje',
+  'śniadanie': 'śniadanie',
+  '3 posiłki': '3 posiłki',
+  '2 posiłki': '2 posiłki',
+  'bez wyżywienia': 'bez wyżywienia',
+  'all inclusive': 'all inclusive',
+  'half board': 'half board',
+  'full board': 'full board',
+  'bed and breakfast': 'bed and breakfast',
+};
+function normalizeMeal(meal) {
+  if (!meal) return null;
+  const key = String(meal).trim().toLowerCase();
+  return MEAL_ALIASES[key] || key;
+}
+
 // Dates like "7.09.2026 - 14.09.2026" or "7.09 - 14.09.2026". First date may omit year.
 // Returns [startISO, endISO] where ISO = YYYY-MM-DD.
 function extractDateRange(text) {
@@ -97,4 +119,5 @@ module.exports = {
   extractMeal,
   extractDateRange,
   normalizeCountry,
+  normalizeMeal,
 };

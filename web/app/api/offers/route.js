@@ -11,6 +11,7 @@ export async function GET(req) {
   const destination = searchParams.get('destination') || null;
   const country = searchParams.get('country') || null;
   const meal_plan = searchParams.get('meal_plan') || null;
+  const departure_city = searchParams.get('departure_city') || null;
   const min_stars = searchParams.get('min_stars') || null;
   const nights_min = searchParams.get('nights_min') || null;
   const nights_max = searchParams.get('nights_max') || null;
@@ -30,6 +31,7 @@ export async function GET(req) {
     if (destination) query = query.ilike('destination', `%${destination}%`);
     if (country) query = query.eq('country', country);
     if (meal_plan) query = query.ilike('meal_plan', `%${meal_plan}%`);
+    if (departure_city) query = query.eq('departure_city', departure_city);
     if (min_stars) query = query.gte('stars', parseInt(min_stars, 10));
     if (nights_min) query = query.gte('nights', parseInt(nights_min, 10));
     if (nights_max) query = query.lte('nights', parseInt(nights_max, 10));

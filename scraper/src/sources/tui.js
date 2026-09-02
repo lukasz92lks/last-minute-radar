@@ -8,6 +8,7 @@ const {
   extractMeal,
   extractDateRange,
   normalizeCountry,
+  normalizeMeal,
 } = require('../parse');
 
 const NAME = 'tui';
@@ -95,7 +96,7 @@ async function scrapeSingleDestination(page, url) {
       start_date: startISO,
       end_date: endISO,
       nights: normalizeNumber(extractNights(tx)),
-      meal_plan: extractMeal(tx),
+      meal_plan: normalizeMeal(extractMeal(tx)),
       rating: (tx.match(/(\d(?:[.,]\d)?)\s*\/\s*5/) || [])[1]
         ? parseFloat(tx.match(/(\d(?:[.,]\d)?)\s*\/\s*5/)[1].replace(',', '.'))
         : null,

@@ -6,6 +6,7 @@ const {
   extractDeparture,
   extractMeal,
   extractDateRange,
+  normalizeMeal,
 } = require('../parse');
 
 const NAME = 'wakacje';
@@ -101,10 +102,10 @@ async function scrapeDestination(page, url) {
     if (nocyMatch) nights = nocyMatch[1];
     else nights = extractNights(tx);
 
-    // departure cities: "Katowice, Warszawa, Rzeszów (+6)"
+    // departure cities: "Katowice, Warszawa, Rzeszów (+6)" — keep the first one
     let departure = null;
     const depMatch = tx.match(/([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+(?:,?\s*[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+)*?)\s*\(\+\d+\)/);
-    if (depMatch) departure = depMatch[1].trim().split(',').map(s=>s.trim()).join(', ');
+    if (depMatch) departure = depMatch[1].trim().split(',')[0].trim();
 
     // rating: "8.7 Bardzo dobry" (scale /10 for wakacje)
     let rating = null;
@@ -126,7 +127,7 @@ async function scrapeDestination(page, url) {
       start_date: startISO,
       end_date: endISO,
       nights: nights ? normalizeNumber(nights) : null,
-      meal_plan: extractMeal(tx),
+      meal_plan: normalizeMeal(extractMeal(tx)),
       rating,
       reviews: reviews ? normalizeNumber(reviews) : null,
       url: c.href && c.href.startsWith('http') ? c.href : `https://www.wakacje.pl${c.href || ''}`,
