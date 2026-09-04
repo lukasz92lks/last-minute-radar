@@ -5,6 +5,7 @@ const {
   extractLowest,
   extractReviews,
   extractMeal,
+  extractDepartureCity,
   normalizeCountry,
   normalizeMeal,
 } = require('../parse');
@@ -129,9 +130,9 @@ function parseCard(c) {
     endISO = end.toISOString().slice(0, 10);
   }
 
-  // departure: "Katowice (+2)" / "Poznań"
-  const depMatch = tx.match(/([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]{4,})\s*\(\+\d+\)/);
-  const departure = depMatch ? depMatch[1].trim() : null;
+// departure: "Katowice (+2)" / "Poznań" — robust extraction that skips
+      // meal/night words sitting before "(+N)" (e.g. "Katowice 2 posiłki (+1)")
+      const departure = extractDepartureCity(tx) || null;
 
   const price = extractPrice(tx);
   const lowest = extractLowest(tx) || extractRainbowLowest(tx);

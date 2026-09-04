@@ -4,6 +4,14 @@ import { supabase } from '../../../lib/supabase';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Airport cities we deliberately expose as filters — protects the chips UI from
+// scraper junk that lands in departure_city (meal names like "posiłki").
+const DEPARTURE_CITY_ALLOWLIST = new Set([
+  'Bydgoszcz', 'Częstochowa', 'Gdańsk', 'Katowice', 'Kraków', 'Lublin', 'Łódź',
+  'Modlin', 'Olsztyn', 'Poznań', 'Radom', 'Rzeszów', 'Szczecin', 'Warszawa',
+  'Wrocław', 'Zielona Góra', 'Berlin',
+]);
+
 export async function GET() {
   try {
     const client = supabase();
@@ -25,7 +33,9 @@ export async function GET() {
         countries: countUnique(countries.data, 'country'),
         meal_plans: countUnique(meals.data, 'meal_plan'),
         sources: countUnique(sources.data, 'source'),
-        departure_cities: countUnique(cities.data, 'departure_city'),
+        departure_cities: countUnique(cities.data, 'departure_city').filter((c) =>
+          DEPARTURE_CITY_ALLOWLIST.has(c)
+        ),
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );

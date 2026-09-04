@@ -6,6 +6,7 @@ const {
   extractDeparture,
   extractMeal,
   extractDateRange,
+  extractDepartureCity,
   normalizeMeal,
 } = require('../parse');
 
@@ -102,10 +103,9 @@ async function scrapeDestination(page, url) {
     if (nocyMatch) nights = nocyMatch[1];
     else nights = extractNights(tx);
 
-    // departure cities: "Katowice, Warszawa, Rzeszów (+6)" — keep the first one
-    let departure = null;
-    const depMatch = tx.match(/([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+(?:,?\s*[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+)*?)\s*\(\+\d+\)/);
-    if (depMatch) departure = depMatch[1].trim().split(',')[0].trim();
+    // departure cities: "Katowice, Warszawa, Rzeszów (+6)" — robust extraction
+    // that skips meal/night words ("2 posiłki (+1)")
+    const departure = extractDepartureCity(tx);
 
     // rating: "8.7 Bardzo dobry" (scale /10 for wakacje)
     let rating = null;

@@ -181,8 +181,14 @@ header.main {
 }
 .chip.active {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  border-color: transparent;
-  color: #04121f;
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3), 0 4px 14px rgba(56, 189, 248, 0.4);
+  transform: translateY(-1px);
+}
+.chip.active::before {
+  content: '\2713 ';
+  font-weight: 900;
 }
 .lbl {
   color: var(--muted);

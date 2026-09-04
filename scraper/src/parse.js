@@ -50,6 +50,42 @@ function extractDeparture(text) {
   return m ? m[1] : null;
 }
 
+// Words that must never be treated as a departure city (meal/night/booking junk
+// that sits before "(+N)" on Rainbow/Wakacje tiles).
+const CITY_BLOCKLIST = new Set([
+  'posiłki', 'posiłek', 'śniadania', 'śniadanie', 'obiadokolacje', 'obiadokolacja',
+  'kolacje', 'kolacja', 'wyżywienia', 'wyżywienie', 'noclegi', 'nocleg', 'noclegów',
+  'noc', 'nocy', 'terminy', 'termin', 'sal', 'sall', 'studia', 'dni', 'inwestycja',
+  'wypoczynek', 'objazd', 'pobyt', 'pokój', 'pokoju', 'apartamenty',
+]);
+
+// Extra departure cities seen on Rainbow/Wakacje tiles (beyond the allowlist above).
+const KNOWN_CITIES = [
+  ...CITIES.split('|'),
+  'Modlin', 'Olsztyn', 'Tarnów', 'Jasionka', 'Starachowice', 'Szymany',
+];
+
+// Robust departure-city extraction for tiles that use "City (...)" patterns.
+// Prefers a known airport city appearing anywhere on the tile (skips meal/night
+// junk). Falls back to scanning the token right before "(+N)".
+function extractDepartureCity(text) {
+  if (!text) return null;
+  const known = text.match(new RegExp(`(${KNOWN_CITIES.join('|')})`));
+  if (known) return known[1];
+
+  const candidateRe = /([A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+(?:\s+[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]+)?)\s*\(\+\d+\)/g;
+  let m;
+  while ((m = candidateRe.exec(text))) {
+    const cand = m[1].trim();
+    const words = cand.split(/\s+/);
+    const knownWord = words.find((w) => KNOWN_CITIES.includes(w));
+    if (knownWord) return knownWord;
+    if (words.some((w) => CITY_BLOCKLIST.has(w.toLowerCase()))) continue;
+    return words[0];
+  }
+  return null;
+}
+
 // Map country names (TUI uses URL slugs) to a canonical Polish display name.
 const COUNTRY_MAP = {
   'turcja': 'Turcja', 'grecja': 'Grecja', 'hiszpania': 'Hiszpania', 'majorka': 'Hiszpania',
@@ -116,6 +152,7 @@ module.exports = {
   extractReviews,
   extractNights,
   extractDeparture,
+  extractDepartureCity,
   extractMeal,
   extractDateRange,
   normalizeCountry,
