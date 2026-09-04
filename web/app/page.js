@@ -21,6 +21,7 @@ function OfferCard({ o, compact }) {
           <img src={o.image_url} alt={o.hotel_name} loading="lazy" />
         </div>
       )}
+      <div className="card-body">
       <div className="card-top">
         <div>
           <div className="hotel-name">{o.hotel_name}</div>
@@ -67,6 +68,7 @@ function OfferCard({ o, compact }) {
             Sprawdź →
           </a>
         )}
+      </div>
       </div>
     </div>
   );
