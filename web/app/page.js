@@ -296,17 +296,43 @@ export default function Home() {
   );
 }
 
-// Simple heuristic: best price per night with a slight bonus for higher star rating.
+// ---- Oferta dnia: algorytm punktowy ----
+// Zasada: score = (cena za noc) / (waga gwiazdek × waga wyżywienia × waga promocji).
+// Im MOCNIEJSZE gwiazdki/lepsze wyżywienie/większa obniżka, tym dzielnik większy
+// i wynik mniejszy -> oferta lepsza. Dzięki temu 5★ all-inclusive potrafi wygrać
+// z tańszą 3★ bez wyżywienia.
+const MEAL_FACTOR = {
+  'all inclusive': 1.8,
+  '3 posiłki': 1.5,
+  'full board': 1.45,
+  'śniadania i obiadokolacje': 1.35,
+  '2 posiłki': 1.25,
+  'śniadanie': 1.1,
+  'bez wyżywienia': 0.85,
+};
+const STAR_FACTOR = { 2: 1.0, 3: 1.25, 4: 1.55, 5: 1.85 };
+
+function dealScore(o) {
+  const perNight = o.price_per_person / o.nights;
+  // nieznane wyżywienie/gwiazdki = mały handicap (0.9 / 0.95)
+  const mealW = MEAL_FACTOR[o.meal_plan] ?? 0.9;
+  const starW = STAR_FACTOR[o.stars] ?? 0.95;
+  // realna akcja promocyjna (cena poniżej najniższej z 30 dni) daje bonus
+  let promoW = 1;
+  if (o.lowest_price_30d && o.lowest_price_30d > 0) {
+    promoW =
+      o.price_per_person < o.lowest_price_30d
+        ? 1 + ((o.lowest_price_30d - o.price_per_person) / o.lowest_price_30d) * 1.5
+        : 0.95;
+  }
+  return perNight / (mealW * starW * promoW);
+}
+
 function pickDeal(offers) {
   if (!offers || !offers.length) return null;
-  const withScore = offers
-    .filter((o) => o.price_per_person && o.nights)
-    .map((o) => {
-      const perNight = o.price_per_person / o.nights;
-      const starBoost = { 5: 0.8, 4: 0.9, 3: 1.0 }[o.stars] || 1.05;
-      return { o, score: perNight * starBoost };
-    })
-    .filter((x) => x.o.start_date && new Date(x.o.start_date) >= new Date());
-  if (!withScore.length) return null;
-  return withScore.reduce((a, b) => (b.score < a.score ? b : a)).o;
+  const candidates = offers
+    .filter((o) => o.price_per_person && o.nights >= 4)
+    .filter((o) => o.start_date && new Date(o.start_date) >= new Date());
+  if (!candidates.length) return null;
+  return candidates.reduce((a, b) => (dealScore(b) < dealScore(a) ? b : a));
 }
