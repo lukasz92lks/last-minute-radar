@@ -152,9 +152,42 @@ header.main {
 .filters button:active {
   transform: translateY(0);
 }
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.chip-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  margin-right: 2px;
+}
+.chip {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.chip:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.chip.active {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #04121f;
+}
 .lbl {
   color: var(--muted);
   font-size: 13px;
+  margin: 16px 0 8px;
 }
 
 /* ---------- Offer grid ---------- */

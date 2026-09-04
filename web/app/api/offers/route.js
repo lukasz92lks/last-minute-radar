@@ -31,7 +31,11 @@ export async function GET(req) {
     if (destination) query = query.ilike('destination', `%${destination}%`);
     if (country) query = query.eq('country', country);
     if (meal_plan) query = query.ilike('meal_plan', `%${meal_plan}%`);
-    if (departure_city) query = query.eq('departure_city', departure_city);
+    if (departure_city) {
+      const cities = departure_city.split(',').map((s) => s.trim()).filter(Boolean);
+      if (cities.length === 1) query = query.eq('departure_city', cities[0]);
+      else if (cities.length > 1) query = query.in('departure_city', cities);
+    }
     if (min_stars) query = query.gte('stars', parseInt(min_stars, 10));
     if (nights_min) query = query.gte('nights', parseInt(nights_min, 10));
     if (nights_max) query = query.lte('nights', parseInt(nights_max, 10));

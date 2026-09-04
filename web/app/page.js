@@ -87,7 +87,7 @@ export default function Home() {
   const [source, setSource] = useState('');
   const [country, setCountry] = useState('');
   const [mealPlan, setMealPlan] = useState('');
-  const [departureCity, setDepartureCity] = useState('');
+  const [departureCities, setDepartureCities] = useState([]);
   const [minStars, setMinStars] = useState('');
   const [nightsMin, setNightsMin] = useState('');
   const [nightsMax, setNightsMax] = useState('');
@@ -104,7 +104,7 @@ export default function Home() {
       if (source) params.set('source', source);
       if (country) params.set('country', country);
       if (mealPlan) params.set('meal_plan', mealPlan);
-      if (departureCity) params.set('departure_city', departureCity);
+      if (departureCities.length) params.set('departure_city', departureCities.join(','));
       if (minStars) params.set('min_stars', minStars);
       if (nightsMin) params.set('nights_min', nightsMin);
       if (nightsMax) params.set('nights_max', nightsMax);
@@ -122,14 +122,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [query, source, country, mealPlan, departureCity, minStars, nightsMin, nightsMax, maxPrice, sort, order]);
+  }, [query, source, country, mealPlan, departureCities, minStars, nightsMin, nightsMax, maxPrice, sort, order]);
 
   const clearFilters = useCallback(() => {
     setQuery('');
     setSource('');
     setCountry('');
     setMealPlan('');
-    setDepartureCity('');
+    setDepartureCities([]);
     setMinStars('');
     setNightsMin('');
     setNightsMax('');
@@ -215,12 +215,26 @@ export default function Home() {
           <option value="4">4★ lub więcej</option>
           <option value="5">5★</option>
         </select>
-        <select value={departureCity} onChange={(e) => setDepartureCity(e.target.value)}>
-          <option value="">Wszystkie lotniska</option>
-          {filters.departure_cities.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+        <div className="chip-group">
+          <span className="chip-label">Lotniska:</span>
+          {filters.departure_cities.map((c) => {
+            const active = departureCities.includes(c);
+            return (
+              <button
+                key={c}
+                type="button"
+                className={`chip${active ? ' active' : ''}`}
+                onClick={() =>
+                  setDepartureCities((prev) =>
+                    active ? prev.filter((x) => x !== c) : [...prev, c]
+                  )
+                }
+              >
+                {c}
+              </button>
+            );
+          })}
+        </div>
         <input
           placeholder="Min. nocy"
           className="num-in"
