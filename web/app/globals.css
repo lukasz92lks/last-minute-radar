@@ -260,20 +260,88 @@ header.main {
 }
 
 .deal-of-day {
-  margin: 16px 0;
-  border: 1px solid rgba(251, 191, 36, 0.5);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(251, 191, 36, 0.1), transparent);
-  padding: 12px;
-  box-shadow: var(--shadow);
+  position: relative;
+  margin: 18px 0 10px;
+  padding: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(640px 220px at 92% -20%, rgba(251, 191, 36, 0.22), transparent 70%),
+    linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(251, 191, 36, 0.02) 55%, transparent);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.4);
 }
 .deal-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 800;
   color: var(--gold);
-  margin-bottom: 8px;
-  letter-spacing: -0.3px;
-  font-size: 14px;
+  margin-bottom: 12px;
+  letter-spacing: 2px;
+  font-size: 12px;
   text-transform: uppercase;
+}
+.deal-tag::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.55), transparent);
+  margin-left: 4px;
+}
+.deal-of-day .offer-card.compact {
+  position: relative;
+  z-index: 1;
+  background: rgba(13, 20, 36, 0.72);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: none;
+}
+.deal-of-day .offer-card.compact .thumb-compact {
+  width: 240px;
+  min-width: 240px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+.deal-of-day .offer-card.compact:hover {
+  transform: none;
+}
+.deal-of-day .offer-card.compact .hotel-name {
+  font-size: 18px;
+}
+.deal-of-day .offer-card.compact .dest {
+  font-size: 13px;
+}
+.deal-of-day .offer-card.compact .price {
+  font-size: 26px;
+  color: var(--gold);
+}
+.deal-of-day .offer-card.compact .price small {
+  font-size: 13px;
+}
+@media (max-width: 640px) {
+  .deal-of-day .offer-card.compact .thumb-compact {
+    width: 130px;
+    min-width: 130px;
+  }
+}
+
+.deal-sub {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+.deal-sub span {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--gold);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
 }
 
 .card-top {

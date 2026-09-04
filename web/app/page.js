@@ -173,6 +173,14 @@ export default function Home() {
         <div className="deal-of-day">
           <div className="deal-tag">🔥 Oferta dnia</div>
           <OfferCard o={dealOfDay} compact />
+          <div className="deal-sub">
+            {dealOfDay.stars && <span>{'★'.repeat(dealOfDay.stars)}</span>}
+            {dealOfDay.price_per_person && dealOfDay.nights ? (
+              <span>
+                {Math.round(dealOfDay.price_per_person / dealOfDay.nights).toLocaleString('pl-PL')} zł / noc
+              </span>
+            ) : null}
+          </div>
         </div>
       )}
 
