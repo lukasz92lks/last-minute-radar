@@ -149,6 +149,22 @@ export default function Home() {
       <header className="main">
         <div className="container">
           <div className="brand">
+            <svg className="brand-mark" viewBox="0 0 64 64" width="34" height="34" aria-hidden="true">
+              <defs>
+                <linearGradient id="radar-sweep" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#818cf8" />
+                </linearGradient>
+              </defs>
+              <circle cx="32" cy="32" r="30" fill="none" stroke="rgba(56,189,248,0.4)" strokeWidth="3" />
+              <circle cx="32" cy="32" r="20" fill="none" stroke="rgba(56,189,248,0.22)" strokeWidth="2" />
+              <circle cx="32" cy="32" r="10" fill="none" stroke="rgba(56,189,248,0.18)" strokeWidth="1.5" />
+              <g style={{ transformOrigin: '32px 32px', animation: 'radar-rotate 8s linear infinite' }}>
+                <path d="M32,32 L21.74,3.81 A30,30 0 0 1 61.54,26.79 Z" fill="url(#radar-sweep)" opacity="0.5" />
+                <circle cx="47" cy="15" r="3.2" fill="#fbbf24" opacity="0.95" />
+              </g>
+              <circle cx="32" cy="32" r="4" fill="#e8eef7" />
+            </svg>
             <span className="last">Last Minute</span> <span className="radar">Radar</span>
           </div>
           <div className="subtitle">

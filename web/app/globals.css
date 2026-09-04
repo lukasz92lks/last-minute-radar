@@ -73,6 +73,18 @@ header.main {
   color: var(--danger);
 }
 
+.brand-mark {
+  align-self: center;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
+}
+
+@keyframes radar-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .subtitle {
   color: var(--muted);
   font-size: 14px;
