@@ -8,14 +8,11 @@ const SOURCE_LABELS = {
   wakacje: "Wakacje.pl",
   rainbow: "Rainbow",
 };
-
-const STAR_LABEL = { 2: "2★", 3: "3★", 4: "4★", 5: "5★" };
-
 const BADGE_COLORS = {
-  tui: "bg-cyan-500/10 text-cyan-400",
-  itaka: "bg-indigo-500/10 text-indigo-400",
-  wakacje: "bg-emerald-500/10 text-emerald-400",
-  rainbow: "bg-amber-500/10 text-amber-400",
+  tui: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+  itaka: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+  wakacje: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+  rainbow: "bg-amber-500/20 text-amber-300 border-amber-500/30",
 };
 
 async function fetchJSON(url) {
@@ -24,138 +21,111 @@ async function fetchJSON(url) {
   return res.json();
 }
 
-function OfferCard({ o, compact }) {
+function OfferCard({ o, isDealOfDay = false }) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border flex transition-all duration-300 hover:shadow-xl ${
-        compact
-          ? "flex-col sm:flex-row items-center gap-4 border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5 p-3 hover:border-amber-500/50"
-          : "flex-col gap-3 border-[#24344f] bg-gradient-to-b from-[#141f33] to-[#101a2c] pb-4 hover:-translate-y-2 hover:border-[#33476b] hover:shadow-cyan-500/10"
+      className={`group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0f172a] shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-cyan-500/20 ${
+        isDealOfDay ? "h-full min-h-[360px]" : "h-[380px]"
       }`}
     >
+      {/* Tło - Zdjęcie hotelu */}
       {o.image_url && (
-        <div
-          className={`relative overflow-hidden bg-[#1b2942] ${
-            compact
-              ? "aspect-[16/10] w-full sm:w-48 shrink-0 rounded-xl shadow-lg"
-              : "aspect-video w-full"
-          }`}
-        >
+        <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={o.image_url}
             alt={o.hotel_name}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
-        </div>
+          {/* Gradient przyciemniający, by tekst był czytelny */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10" />
+        </>
       )}
-      <div
-        className={`flex flex-col gap-2 ${compact ? "flex-1 px-1" : "px-4"}`}
-      >
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div
-              className={`font-bold leading-tight ${compact ? "text-lg text-white" : "text-base text-gray-100"}`}
-            >
-              {o.hotel_name}
-            </div>
-            {o.destination && (
-              <div className="text-sm text-slate-400 line-clamp-1">
-                {o.destination}
-              </div>
-            )}
-            {o.country && !compact && (
-              <div className="text-sm text-slate-400">🌍 {o.country}</div>
-            )}
-          </div>
-          <span
-            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wider ${
-              BADGE_COLORS[o.source] || "bg-slate-800 text-slate-300"
-            }`}
-          >
-            {SOURCE_LABELS[o.source] || o.source}
+
+      {/* Tagi na górze karty */}
+      <div className="absolute left-5 top-5 flex items-start justify-between right-5 z-10">
+        <span
+          className={`rounded-2xl border px-3 py-1.5 text-xs font-black uppercase tracking-wider backdrop-blur-md ${
+            BADGE_COLORS[o.source] || "border-white/20 bg-white/10 text-white"
+          }`}
+        >
+          {SOURCE_LABELS[o.source] || o.source}
+        </span>
+        {isDealOfDay && (
+          <span className="animate-pulse rounded-2xl bg-amber-500/90 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-amber-950 shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+            🔥 Oferta Dnia
           </span>
+        )}
+      </div>
+
+      {/* Szklany panel na dole (Glassmorphism) */}
+      <div className="absolute bottom-0 inset-x-0 flex flex-col justify-end border-t border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+        <div className="mb-1 flex items-center gap-2">
+          {o.stars ? (
+            <span className="text-sm font-bold tracking-widest text-amber-400 drop-shadow-md">
+              {"★".repeat(o.stars)}
+            </span>
+          ) : null}
+          {o.rating ? (
+            <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-xs font-bold text-emerald-300">
+              {o.rating.toFixed(1)}/5
+            </span>
+          ) : null}
         </div>
 
-        {!compact &&
-          (o.start_date || o.nights || o.meal_plan || o.departure_city) && (
-            <div className="flex flex-wrap gap-1.5 text-[13px] text-slate-400">
-              {o.start_date && (
-                <span className="rounded-md bg-[#1b2942] px-2 py-1">
-                  {new Date(o.start_date).toLocaleDateString("pl-PL")}
-                  {o.end_date &&
-                    ` – ${new Date(o.end_date).toLocaleDateString("pl-PL")}`}
-                </span>
-              )}
-              {o.nights ? (
-                <span className="rounded-md bg-[#1b2942] px-2 py-1">
-                  {o.nights} nocy
-                </span>
-              ) : null}
-              {o.meal_plan ? (
-                <span className="rounded-md bg-[#1b2942] px-2 py-1">
-                  {o.meal_plan}
-                </span>
-              ) : null}
-              {o.departure_city ? (
-                <span className="rounded-md bg-[#1b2942] px-2 py-1">
-                  wylot: {o.departure_city}
-                </span>
-              ) : null}
-            </div>
+        <h3 className="line-clamp-2 text-xl font-bold leading-tight text-white drop-shadow-lg">
+          {o.hotel_name}
+        </h3>
+        <p className="mt-1 text-sm text-slate-300">
+          {o.destination} {o.country && `• ${o.country}`}
+        </p>
+
+        {/* Metadane wycieczki */}
+        <div className="mt-4 mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-200">
+          {o.start_date && (
+            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+              {new Date(o.start_date).toLocaleDateString("pl-PL").slice(0, 5)}
+              {o.end_date &&
+                ` - ${new Date(o.end_date).toLocaleDateString("pl-PL").slice(0, 5)}`}
+            </span>
           )}
+          {o.nights ? (
+            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+              {o.nights} nocy
+            </span>
+          ) : null}
+          {o.meal_plan ? (
+            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+              {o.meal_plan}
+            </span>
+          ) : null}
+        </div>
 
-        {!compact && (
-          <div className="flex flex-wrap gap-2 text-sm text-slate-400">
-            {o.stars ? (
-              <span className="font-bold tracking-widest text-amber-400">
-                {"★".repeat(o.stars)}
-              </span>
-            ) : null}
-            {o.rating ? (
-              <span className="font-bold text-emerald-400">
-                ★ {o.rating.toFixed(1)}
-              </span>
-            ) : null}
-            {o.reviews ? <span>{o.reviews} opinii</span> : null}
-          </div>
-        )}
-
-        <div
-          className={`mt-auto flex items-end justify-between gap-2 ${compact ? "pt-2" : "pt-4"}`}
-        >
-          <div className="leading-none">
-            <div
-              className={`font-black tracking-tight ${compact ? "text-2xl text-amber-400" : "text-xl text-white"}`}
-            >
+        {/* Cena i przycisk */}
+        <div className="flex items-end justify-between border-t border-white/10 pt-3">
+          <div>
+            <div className="text-3xl font-black text-white drop-shadow-lg">
               {o.price_per_person
                 ? `${o.price_per_person.toLocaleString("pl-PL")} zł`
                 : "—"}
-              <small className="text-xs font-normal text-slate-400">
-                {" "}
-                / os.
-              </small>
             </div>
-            {!compact &&
-              o.lowest_price_30d &&
-              o.lowest_price_30d < o.price_per_person && (
-                <div className="mt-1 text-xs text-slate-400">
-                  najniżej: {o.lowest_price_30d.toLocaleString("pl-PL")} zł
-                </div>
-              )}
+            <div className="text-xs text-slate-400">
+              za osobę{" "}
+              {o.lowest_price_30d &&
+                o.lowest_price_30d < o.price_per_person &&
+                `• najniżej: ${o.lowest_price_30d.toLocaleString("pl-PL")} zł`}
+            </div>
           </div>
+
           {o.url && (
             <a
               href={o.url}
               target="_blank"
               rel="noreferrer"
-              className="group/btn flex items-center gap-1 whitespace-nowrap text-sm font-bold text-cyan-400 transition-colors hover:text-indigo-400"
+              className="flex h-10 items-center justify-center rounded-xl bg-white text-sm font-bold text-black transition-transform hover:scale-105 hover:bg-cyan-400 px-5 shadow-lg"
             >
               Sprawdź
-              <span className="transition-transform group-hover/btn:translate-x-1">
-                →
-              </span>
             </a>
           )}
         </div>
@@ -256,202 +226,203 @@ export default function Home() {
       .catch(() => {});
   }, [load]);
 
-  const inputClasses =
-    "bg-[#141f33] border border-[#24344f] text-slate-200 rounded-xl px-4 py-2.5 text-sm transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 w-full md:w-auto placeholder:text-slate-500";
+  const glassInputClass =
+    "bg-white/5 backdrop-blur-md border border-white/10 text-white rounded-2xl px-4 py-3 text-sm transition-all focus:border-cyan-400 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-cyan-400 w-full placeholder:text-slate-500 shadow-lg";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <header className="sticky top-0 z-20 -mx-4 border-b border-[#24344f] bg-[#0b1220]/80 px-4 py-5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-        <div className="flex items-baseline gap-2 text-2xl font-black tracking-tighter text-white sm:text-3xl">
-          <svg
-            className="h-8 w-8 shrink-0 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)] sm:h-9 sm:w-9"
-            viewBox="0 0 64 64"
-            aria-hidden="true"
-          >
-            <defs>
-              <linearGradient id="radar-sweep" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#818cf8" />
-              </linearGradient>
-            </defs>
-            <circle
-              cx="32"
-              cy="32"
-              r="30"
-              fill="none"
-              stroke="rgba(56,189,248,0.4)"
-              strokeWidth="3"
-            />
-            <circle
-              cx="32"
-              cy="32"
-              r="20"
-              fill="none"
-              stroke="rgba(56,189,248,0.22)"
-              strokeWidth="2"
-            />
-            <circle
-              cx="32"
-              cy="32"
-              r="10"
-              fill="none"
-              stroke="rgba(56,189,248,0.18)"
-              strokeWidth="1.5"
-            />
-            <g className="radar-spin">
-              <path
-                d="M32,32 L21.74,3.81 A30,30 0 0 1 61.54,26.79 Z"
-                fill="url(#radar-sweep)"
-                opacity="0.5"
-              />
-              <circle cx="47" cy="15" r="3.2" fill="#fbbf24" opacity="0.95" />
-            </g>
-            <circle cx="32" cy="32" r="4" fill="#e8eef7" />
-          </svg>
-          <span className="text-red-400">Last Minute</span>
-          <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
-            Radar
-          </span>
-        </div>
-        <div className="mt-1 text-xs text-slate-400 sm:text-sm">
-          Oferty z polskich biur podróży zebrane w jedno miejsce.
-        </div>
-      </header>
+    <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-cyan-500/30">
+      {/* Kolorowe "bloby" w tle tworzące ambientowy klimat */}
+      <div className="pointer-events-none absolute -top-[10%] -left-[10%] h-[50vw] w-[50vw] rounded-full bg-cyan-600/10 blur-[120px]" />
+      <div className="pointer-events-none absolute top-[20%] -right-[10%] h-[40vw] w-[40vw] rounded-full bg-indigo-600/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-0 left-[20%] h-[30vw] w-[40vw] rounded-full bg-emerald-600/10 blur-[120px]" />
 
-      {/* Stats Bar */}
-      <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          { label: "ofert", val: stats?.total ?? "…" },
-          {
-            label: "najtańsza",
-            val: stats?.min_price ? `od ${stats.min_price} zł` : "…",
-          },
-          {
-            label: "średnia cena",
-            val: stats?.avg_price ? `${stats.avg_price} zł` : "…",
-          },
-          {
-            label: "aktualizacja",
-            val: stats?.updated_at
-              ? new Date(stats.updated_at).toLocaleString("pl-PL", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
-              : "…",
-          },
-        ].map((stat, i) => (
-          <div
-            key={i}
-            className="flex flex-col justify-center rounded-2xl border border-[#24344f] bg-gradient-to-b from-[#101a2c] to-[#141f33] p-4 shadow-lg"
-          >
-            <div className="text-xl font-black text-white sm:text-2xl">
-              {stat.val}
-            </div>
-            <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-400 sm:text-xs">
-              {stat.label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Deal of the day */}
-      {dealOfDay && (
-        <div className="relative mt-8 overflow-hidden rounded-3xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent p-6 shadow-2xl">
-          <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-amber-500/20 blur-[80px]" />
-          <div className="relative z-10">
-            <div className="mb-4 flex items-center gap-3 text-xs font-black uppercase tracking-widest text-amber-400">
-              🔥 Oferta dnia
-              <div className="h-px flex-1 bg-gradient-to-r from-amber-500/50 to-transparent" />
-            </div>
-            <OfferCard o={dealOfDay} compact />
-            <div className="mt-3 flex justify-end gap-2">
-              {dealOfDay.price_per_person && dealOfDay.nights ? (
-                <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs font-bold text-amber-400 shadow-sm">
-                  ~
-                  {Math.round(
-                    dealOfDay.price_per_person / dealOfDay.nights,
-                  ).toLocaleString("pl-PL")}{" "}
-                  zł / noc
+      <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Header Glassmorphism */}
+        <header className="sticky top-4 z-50 mb-8 mt-4 rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl shadow-2xl">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-3 text-2xl font-black tracking-tighter text-white">
+              <svg
+                className="h-10 w-10 shrink-0 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]"
+                viewBox="0 0 64 64"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="radar-sweep" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" />
+                    <stop offset="100%" stopColor="#818cf8" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="30"
+                  fill="none"
+                  stroke="rgba(56,189,248,0.4)"
+                  strokeWidth="3"
+                />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="20"
+                  fill="none"
+                  stroke="rgba(56,189,248,0.22)"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="10"
+                  fill="none"
+                  stroke="rgba(56,189,248,0.18)"
+                  strokeWidth="1.5"
+                />
+                <g
+                  className="animate-[spin_4s_linear_infinite]"
+                  style={{ transformOrigin: "32px 32px" }}
+                >
+                  <path
+                    d="M32,32 L21.74,3.81 A30,30 0 0 1 61.54,26.79 Z"
+                    fill="url(#radar-sweep)"
+                    opacity="0.5"
+                  />
+                  <circle
+                    cx="47"
+                    cy="15"
+                    r="3.2"
+                    fill="#fbbf24"
+                    opacity="0.95"
+                  />
+                </g>
+                <circle cx="32" cy="32" r="4" fill="#e8eef7" />
+              </svg>
+              <div>
+                <span className="text-white">Last Minute</span>
+                <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
+                  Radar
                 </span>
-              ) : null}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        </header>
 
-      {/* Filters */}
-      <div className="mt-8 flex flex-col gap-4 rounded-2xl bg-[#101a2c]/50 p-4">
-        <div className="flex flex-wrap gap-3">
-          <input
-            className={`${inputClasses} flex-1 md:min-w-[240px]`}
-            placeholder="Szukaj hotelu / miejscowości…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <select
-            className={inputClasses}
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-          >
-            <option value="">Wszystkie biura</option>
-            {filters.sources.map((s) => (
-              <option key={s} value={s}>
-                {SOURCE_LABELS[s] || s}
-              </option>
+        {/* Bento Grid: Oferta Dnia + Statystyki */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {dealOfDay && (
+            <div className="lg:col-span-2">
+              <OfferCard o={dealOfDay} isDealOfDay={true} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                label: "Aktywnych ofert",
+                val: stats?.total ?? "…",
+                color: "from-cyan-500/20 to-transparent",
+              },
+              {
+                label: "Najtańsza opcja",
+                val: stats?.min_price ? `${stats.min_price} zł` : "…",
+                color: "from-emerald-500/20 to-transparent",
+              },
+              {
+                label: "Średnia rynkowa",
+                val: stats?.avg_price ? `${stats.avg_price} zł` : "…",
+                color: "from-indigo-500/20 to-transparent",
+              },
+              {
+                label: "Ostatni skan",
+                val: stats?.updated_at
+                  ? new Date(stats.updated_at).toLocaleTimeString("pl-PL", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "…",
+                color: "from-amber-500/20 to-transparent",
+              },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className={`relative flex flex-col justify-end overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl bg-gradient-to-br ${stat.color}`}
+              >
+                <div className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  {stat.label}
+                </div>
+                <div className="text-2xl lg:text-3xl font-black text-white">
+                  {stat.val}
+                </div>
+              </div>
             ))}
-          </select>
-          <select
-            className={inputClasses}
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-          >
-            <option value="">Wszystkie kraje</option>
-            {filters.countries.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <select
-            className={inputClasses}
-            value={mealPlan}
-            onChange={(e) => setMealPlan(e.target.value)}
-          >
-            <option value="">Każde wyżywienie</option>
-            {filters.meal_plans.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <select
-            className={inputClasses}
-            value={minStars}
-            onChange={(e) => setMinStars(e.target.value)}
-          >
-            <option value="">Gwiazdki: dowolne</option>
-            <option value="3">3★ lub więcej</option>
-            <option value="4">4★ lub więcej</option>
-            <option value="5">5★</option>
-          </select>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-slate-400">
-            Lotniska:
-          </span>
-          <div className="flex flex-wrap gap-2">
+        {/* Filtry - Glassmorphism Pills */}
+        <div className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <input
+              className={glassInputClass}
+              placeholder="Dokąd chcesz lecieć? (hotel, kraj...)"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <select
+              className={`${glassInputClass} appearance-none`}
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            >
+              <option value="" className="bg-slate-900">
+                Wszystkie biura
+              </option>
+              {filters.sources.map((s) => (
+                <option key={s} value={s} className="bg-slate-900">
+                  {SOURCE_LABELS[s] || s}
+                </option>
+              ))}
+            </select>
+            <select
+              className={`${glassInputClass} appearance-none`}
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+            >
+              <option value="" className="bg-slate-900">
+                Wszystkie kraje
+              </option>
+              {filters.countries.map((c) => (
+                <option key={c} value={c} className="bg-slate-900">
+                  {c}
+                </option>
+              ))}
+            </select>
+            <select
+              className={`${glassInputClass} appearance-none`}
+              value={mealPlan}
+              onChange={(e) => setMealPlan(e.target.value)}
+            >
+              <option value="" className="bg-slate-900">
+                Każde wyżywienie
+              </option>
+              {filters.meal_plans.map((m) => (
+                <option key={m} value={m} className="bg-slate-900">
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
+            <span className="text-sm font-semibold text-slate-400">
+              Wyloty z:
+            </span>
             {filters.departure_cities.map((c) => {
               const active = departureCities.includes(c);
               return (
                 <button
                   key={c}
                   type="button"
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                  className={`rounded-xl px-4 py-2 text-sm font-bold transition-all backdrop-blur-md ${
                     active
-                      ? "bg-gradient-to-r from-cyan-400 to-indigo-400 text-[#0b1220] shadow-[0_0_12px_rgba(56,189,248,0.4)]"
-                      : "border border-[#24344f] bg-[#141f33] text-slate-300 hover:border-[#33476b] hover:bg-[#1b2942]"
+                      ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105"
+                      : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
                   }`}
                   onClick={() =>
                     setDepartureCities((prev) =>
@@ -459,111 +430,109 @@ export default function Home() {
                     )
                   }
                 >
-                  {active && <span className="mr-1">✓</span>}
                   {c}
                 </button>
               );
             })}
           </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            placeholder="Min. nocy"
-            className={`${inputClasses} w-24`}
-            value={nightsMin}
-            onChange={(e) => setNightsMin(e.target.value.replace(/\D/g, ""))}
-          />
-          <input
-            placeholder="Max. nocy"
-            className={`${inputClasses} w-24`}
-            value={nightsMax}
-            onChange={(e) => setNightsMax(e.target.value.replace(/\D/g, ""))}
-          />
-          <input
-            placeholder="Max cena (zł)"
-            className={`${inputClasses} w-32`}
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value.replace(/\D/g, ""))}
-          />
-          <select
-            className={inputClasses}
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-          >
-            <option value="price">Cena</option>
-            <option value="rating">Ocena</option>
-            <option value="newest">Najnowsze</option>
-          </select>
-          <select
-            className={inputClasses}
-            value={order}
-            onChange={(e) => setOrder(e.target.value)}
-          >
-            <option value="asc">Rosnąco</option>
-            <option value="desc">Malejąco</option>
-          </select>
-          <button
-            onClick={load}
-            className="ml-auto rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-400 px-6 py-2.5 text-sm font-black text-[#04121f] transition-all hover:scale-105 hover:brightness-110 active:scale-95"
-          >
-            Szukaj ofert
-          </button>
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="mt-8 mb-20">
-        {error && (
-          <div className="py-20 text-center text-slate-400">{error}</div>
-        )}
-        {loading && (
-          <div className="flex animate-pulse py-20 items-center justify-center space-x-2 text-cyan-400">
-            <div className="h-3 w-3 rounded-full bg-cyan-400"></div>
-            <div className="h-3 w-3 rounded-full bg-cyan-400 animation-delay-200"></div>
-            <div className="h-3 w-3 rounded-full bg-cyan-400 animation-delay-400"></div>
-          </div>
-        )}
-
-        {!loading && !error && offers.length === 0 && (
-          <div className="py-20 text-center text-slate-400">
-            <p className="mb-4 text-sm">
-              Brak ofert spełniających kryteria. Spróbuj zmniejszyć liczbę
-              filtrów.
-            </p>
-            <button
-              className="rounded-xl border border-[#33476b] px-4 py-2 text-sm font-semibold transition-colors hover:border-cyan-400 hover:text-cyan-400"
-              onClick={clearFilters}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 border-t border-white/10 pt-4">
+            <input
+              placeholder="Min nocy"
+              className={glassInputClass}
+              value={nightsMin}
+              onChange={(e) => setNightsMin(e.target.value.replace(/\D/g, ""))}
+            />
+            <input
+              placeholder="Max nocy"
+              className={glassInputClass}
+              value={nightsMax}
+              onChange={(e) => setNightsMax(e.target.value.replace(/\D/g, ""))}
+            />
+            <input
+              placeholder="Max cena"
+              className={glassInputClass}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value.replace(/\D/g, ""))}
+            />
+            <select
+              className={`${glassInputClass} appearance-none`}
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
             >
-              Wyczyść filtry
+              <option value="price" className="bg-slate-900">
+                Cena
+              </option>
+              <option value="rating" className="bg-slate-900">
+                Ocena
+              </option>
+              <option value="newest" className="bg-slate-900">
+                Najnowsze
+              </option>
+            </select>
+            <select
+              className={`${glassInputClass} appearance-none`}
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+            >
+              <option value="asc" className="bg-slate-900">
+                Rosnąco
+              </option>
+              <option value="desc" className="bg-slate-900">
+                Malejąco
+              </option>
+            </select>
+            <button
+              onClick={load}
+              className="rounded-2xl bg-white text-black font-black transition-all hover:bg-cyan-400 hover:scale-105 shadow-xl w-full h-full min-h-[48px]"
+            >
+              Szukaj
             </button>
           </div>
-        )}
+        </div>
 
-        {!loading && offers.length > 0 && (
-          <>
-            <div className="mb-4 text-sm font-semibold text-slate-400">
-              Znaleziono {total} ofert
+        {/* Results Grid */}
+        <div>
+          {error && (
+            <div className="py-20 text-center text-slate-400">{error}</div>
+          )}
+
+          {loading && (
+            <div className="flex animate-pulse py-32 items-center justify-center space-x-3">
+              <div className="h-4 w-4 rounded-full bg-cyan-400"></div>
+              <div className="h-4 w-4 rounded-full bg-indigo-400"></div>
+              <div className="h-4 w-4 rounded-full bg-emerald-400"></div>
             </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          )}
+
+          {!loading && !error && offers.length === 0 && (
+            <div className="rounded-[2rem] border border-white/10 bg-white/5 py-24 text-center backdrop-blur-md">
+              <p className="mb-6 text-lg text-slate-300">
+                Brak ofert spełniających kryteria.
+              </p>
+              <button
+                className="rounded-xl bg-white/10 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/20"
+                onClick={clearFilters}
+              >
+                Wyczyść filtry
+              </button>
+            </div>
+          )}
+
+          {!loading && offers.length > 0 && (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
               {offers.map((o) => (
                 <OfferCard key={o.id} o={o} />
               ))}
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-[#24344f] py-8 text-center text-xs text-slate-500 sm:text-sm">
-        Dane zbierane automatycznie ze stron biur podróży. Ceny mogą się
-        zmieniać — sprawdź na stronie biura przed rezerwacją.
-      </footer>
     </div>
   );
 }
 
-// ---- Oferta dnia: algorytm punktowy ----
+// Algorytm Oceny
 const MEAL_FACTOR = {
   "all inclusive": 1.8,
   "3 posiłki": 1.5,
