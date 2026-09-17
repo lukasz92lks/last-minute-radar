@@ -24,11 +24,11 @@ async function fetchJSON(url) {
 function OfferCard({ o, isDealOfDay = false }) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0f172a] shadow-2xl transition-all duration-500 hover:-translate-y-2 hover:shadow-cyan-500/20 ${
-        isDealOfDay ? "h-full min-h-[360px]" : "h-[380px]"
+      className={`group relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0f172a] shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-cyan-500/20 ${
+        isDealOfDay ? "h-full min-h-[360px]" : "h-[360px]"
       }`}
     >
-      {/* Tło - Zdjęcie hotelu */}
+      {/* Tło - Zdjęcie hotelu z łagodnym przyciemnieniem */}
       {o.image_url && (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -36,31 +36,31 @@ function OfferCard({ o, isDealOfDay = false }) {
             src={o.image_url}
             alt={o.hotel_name}
             loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {/* Gradient przyciemniający, by tekst był czytelny */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10" />
+          {/* Wydajny gradient liniowy zamiast blur, z mniejszym kryciem dla lepszej widoczności zdjęcia */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent" />
         </>
       )}
 
       {/* Tagi na górze karty */}
-      <div className="absolute left-5 top-5 flex items-start justify-between right-5 z-10">
+      <div className="absolute left-5 top-5 right-5 flex items-start justify-between z-10">
         <span
-          className={`rounded-2xl border px-3 py-1.5 text-xs font-black uppercase tracking-wider backdrop-blur-md ${
-            BADGE_COLORS[o.source] || "border-white/20 bg-white/10 text-white"
+          className={`rounded-2xl border px-3 py-1.5 text-xs font-black uppercase tracking-wider shadow-md ${
+            BADGE_COLORS[o.source] || "border-white/20 bg-black/40 text-white"
           }`}
         >
           {SOURCE_LABELS[o.source] || o.source}
         </span>
         {isDealOfDay && (
-          <span className="animate-pulse rounded-2xl bg-amber-500/90 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-amber-950 shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+          <span className="animate-pulse rounded-2xl bg-amber-500 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-amber-950 shadow-md">
             🔥 Oferta Dnia
           </span>
         )}
       </div>
 
-      {/* Szklany panel na dole (Glassmorphism) */}
-      <div className="absolute bottom-0 inset-x-0 flex flex-col justify-end border-t border-white/10 bg-white/5 p-5 backdrop-blur-xl">
+      {/* Detale na dole karty */}
+      <div className="absolute bottom-0 inset-x-0 flex flex-col justify-end p-5">
         <div className="mb-1 flex items-center gap-2">
           {o.stars ? (
             <span className="text-sm font-bold tracking-widest text-amber-400 drop-shadow-md">
@@ -77,26 +77,26 @@ function OfferCard({ o, isDealOfDay = false }) {
         <h3 className="line-clamp-2 text-xl font-bold leading-tight text-white drop-shadow-lg">
           {o.hotel_name}
         </h3>
-        <p className="mt-1 text-sm text-slate-300">
+        <p className="mt-1 text-sm text-slate-300 drop-shadow-md">
           {o.destination} {o.country && `• ${o.country}`}
         </p>
 
-        {/* Metadane wycieczki */}
-        <div className="mt-4 mb-4 flex flex-wrap gap-2 text-xs font-medium text-slate-200">
+        {/* Metadane wycieczki - odchudzone */}
+        <div className="mt-3 mb-3 flex flex-wrap gap-2 text-xs font-medium text-slate-200">
           {o.start_date && (
-            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+            <span className="rounded-xl bg-black/50 border border-white/5 px-2.5 py-1">
               {new Date(o.start_date).toLocaleDateString("pl-PL").slice(0, 5)}
               {o.end_date &&
                 ` - ${new Date(o.end_date).toLocaleDateString("pl-PL").slice(0, 5)}`}
             </span>
           )}
           {o.nights ? (
-            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+            <span className="rounded-xl bg-black/50 border border-white/5 px-2.5 py-1">
               {o.nights} nocy
             </span>
           ) : null}
           {o.meal_plan ? (
-            <span className="rounded-xl bg-black/40 px-2.5 py-1 backdrop-blur-md">
+            <span className="rounded-xl bg-black/50 border border-white/5 px-2.5 py-1">
               {o.meal_plan}
             </span>
           ) : null}
@@ -105,7 +105,7 @@ function OfferCard({ o, isDealOfDay = false }) {
         {/* Cena i przycisk */}
         <div className="flex items-end justify-between border-t border-white/10 pt-3">
           <div>
-            <div className="text-3xl font-black text-white drop-shadow-lg">
+            <div className="text-2xl font-black text-white drop-shadow-lg">
               {o.price_per_person
                 ? `${o.price_per_person.toLocaleString("pl-PL")} zł`
                 : "—"}
@@ -123,7 +123,7 @@ function OfferCard({ o, isDealOfDay = false }) {
               href={o.url}
               target="_blank"
               rel="noreferrer"
-              className="flex h-10 items-center justify-center rounded-xl bg-white text-sm font-bold text-black transition-transform hover:scale-105 hover:bg-cyan-400 px-5 shadow-lg"
+              className="flex h-9 items-center justify-center rounded-xl bg-white text-sm font-bold text-black transition-colors hover:bg-cyan-400 px-4 shadow-md"
             >
               Sprawdź
             </a>
@@ -226,87 +226,35 @@ export default function Home() {
       .catch(() => {});
   }, [load]);
 
-  const glassInputClass =
-    "bg-white/5 backdrop-blur-md border border-white/10 text-white rounded-2xl px-4 py-3 text-sm transition-all focus:border-cyan-400 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-cyan-400 w-full placeholder:text-slate-500 shadow-lg";
+  const inputClass =
+    "bg-[#1e293b] border border-white/5 text-white rounded-xl px-4 py-2.5 text-sm transition-colors focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 w-full placeholder:text-slate-500 shadow-inner";
 
   return (
-    <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-cyan-500/30">
-      {/* Kolorowe "bloby" w tle tworzące ambientowy klimat */}
-      <div className="pointer-events-none absolute -top-[10%] -left-[10%] h-[50vw] w-[50vw] rounded-full bg-cyan-600/10 blur-[120px]" />
-      <div className="pointer-events-none absolute top-[20%] -right-[10%] h-[40vw] w-[40vw] rounded-full bg-indigo-600/10 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-0 left-[20%] h-[30vw] w-[40vw] rounded-full bg-emerald-600/10 blur-[120px]" />
-
-      <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pb-20">
-        {/* Header Glassmorphism */}
-        <header className="sticky top-4 z-50 mb-8 mt-4 rounded-3xl border border-white/10 bg-white/5 px-6 py-4 backdrop-blur-xl shadow-2xl">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3 text-2xl font-black tracking-tighter text-white">
-              <svg
-                className="h-10 w-10 shrink-0 drop-shadow-[0_0_15px_rgba(56,189,248,0.5)]"
-                viewBox="0 0 64 64"
-                aria-hidden="true"
-              >
-                <defs>
-                  <linearGradient id="radar-sweep" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" />
-                    <stop offset="100%" stopColor="#818cf8" />
-                  </linearGradient>
-                </defs>
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="30"
-                  fill="none"
-                  stroke="rgba(56,189,248,0.4)"
-                  strokeWidth="3"
-                />
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="20"
-                  fill="none"
-                  stroke="rgba(56,189,248,0.22)"
-                  strokeWidth="2"
-                />
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="10"
-                  fill="none"
-                  stroke="rgba(56,189,248,0.18)"
-                  strokeWidth="1.5"
-                />
-                <g
-                  className="animate-[spin_4s_linear_infinite]"
-                  style={{ transformOrigin: "32px 32px" }}
-                >
-                  <path
-                    d="M32,32 L21.74,3.81 A30,30 0 0 1 61.54,26.79 Z"
-                    fill="url(#radar-sweep)"
-                    opacity="0.5"
-                  />
-                  <circle
-                    cx="47"
-                    cy="15"
-                    r="3.2"
-                    fill="#fbbf24"
-                    opacity="0.95"
-                  />
-                </g>
-                <circle cx="32" cy="32" r="4" fill="#e8eef7" />
-              </svg>
-              <div>
-                <span className="text-white">Last Minute</span>
-                <span className="bg-gradient-to-r from-cyan-400 to-indigo-400 bg-clip-text text-transparent">
-                  Radar
-                </span>
-              </div>
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 selection:bg-cyan-500/30 pb-20">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
+        {/* Header - zoptymalizowany */}
+        <header className="sticky top-0 z-50 mb-6 py-4 bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/5">
+          <div className="flex items-center gap-3 text-2xl font-black tracking-tighter text-white">
+            <svg
+              className="h-8 w-8 shrink-0 text-cyan-400"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            <div>
+              <span className="text-white">Last Minute</span>
+              <span className="text-cyan-400">Radar</span>
             </div>
           </div>
         </header>
 
         {/* Bento Grid: Oferta Dnia + Statystyki */}
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-5">
           {dealOfDay && (
             <div className="lg:col-span-2">
               <OfferCard o={dealOfDay} isDealOfDay={true} />
@@ -318,17 +266,17 @@ export default function Home() {
               {
                 label: "Aktywnych ofert",
                 val: stats?.total ?? "…",
-                color: "from-cyan-500/20 to-transparent",
+                bg: "bg-[#1e293b]",
               },
               {
                 label: "Najtańsza opcja",
                 val: stats?.min_price ? `${stats.min_price} zł` : "…",
-                color: "from-emerald-500/20 to-transparent",
+                bg: "bg-[#1e293b]",
               },
               {
                 label: "Średnia rynkowa",
                 val: stats?.avg_price ? `${stats.avg_price} zł` : "…",
-                color: "from-indigo-500/20 to-transparent",
+                bg: "bg-[#1e293b]",
               },
               {
                 label: "Ostatni skan",
@@ -338,80 +286,82 @@ export default function Home() {
                       minute: "2-digit",
                     })
                   : "…",
-                color: "from-amber-500/20 to-transparent",
+                bg: "bg-[#1e293b]",
               },
             ].map((stat, i) => (
               <div
                 key={i}
-                className={`relative flex flex-col justify-end overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-md shadow-xl bg-gradient-to-br ${stat.color}`}
+                className={`relative flex flex-col justify-center rounded-3xl border border-white/5 p-5 shadow-lg ${stat.bg}`}
               >
-                <div className="mb-1 text-xs font-bold uppercase tracking-wider text-slate-400">
+                <div className="text-2xl font-black text-white">{stat.val}</div>
+                <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400">
                   {stat.label}
-                </div>
-                <div className="text-2xl lg:text-3xl font-black text-white">
-                  {stat.val}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Filtry - Glassmorphism Pills */}
-        <div className="mb-8 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-xl shadow-2xl">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Filtry - zoptymalizowane pod wydajność */}
+        <div className="mb-8 flex flex-col gap-4 rounded-[2rem] bg-[#1e293b]/50 p-5 shadow-lg border border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
             <input
-              className={glassInputClass}
-              placeholder="Dokąd chcesz lecieć? (hotel, kraj...)"
+              className={inputClass}
+              placeholder="Dokąd chcesz lecieć?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
             <select
-              className={`${glassInputClass} appearance-none`}
+              className={`${inputClass} appearance-none`}
               value={source}
               onChange={(e) => setSource(e.target.value)}
             >
-              <option value="" className="bg-slate-900">
-                Wszystkie biura
-              </option>
+              <option value="">Wszystkie biura</option>
               {filters.sources.map((s) => (
-                <option key={s} value={s} className="bg-slate-900">
+                <option key={s} value={s}>
                   {SOURCE_LABELS[s] || s}
                 </option>
               ))}
             </select>
             <select
-              className={`${glassInputClass} appearance-none`}
+              className={`${inputClass} appearance-none`}
               value={country}
               onChange={(e) => setCountry(e.target.value)}
             >
-              <option value="" className="bg-slate-900">
-                Wszystkie kraje
-              </option>
+              <option value="">Wszystkie kraje</option>
               {filters.countries.map((c) => (
-                <option key={c} value={c} className="bg-slate-900">
+                <option key={c} value={c}>
                   {c}
                 </option>
               ))}
             </select>
             <select
-              className={`${glassInputClass} appearance-none`}
+              className={`${inputClass} appearance-none`}
               value={mealPlan}
               onChange={(e) => setMealPlan(e.target.value)}
             >
-              <option value="" className="bg-slate-900">
-                Każde wyżywienie
-              </option>
+              <option value="">Każde wyżywienie</option>
               {filters.meal_plans.map((m) => (
-                <option key={m} value={m} className="bg-slate-900">
+                <option key={m} value={m}>
                   {m}
                 </option>
               ))}
             </select>
+            <select
+              className={`${inputClass} appearance-none`}
+              value={minStars}
+              onChange={(e) => setMinStars(e.target.value)}
+            >
+              <option value="">Gwiazdki: dowolne</option>
+              <option value="3">3★ lub więcej</option>
+              <option value="4">4★ lub więcej</option>
+              <option value="5">5★</option>
+            </select>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-white/10 pt-4">
-            <span className="text-sm font-semibold text-slate-400">
-              Wyloty z:
+          <div className="flex flex-wrap items-center gap-2 border-t border-white/5 pt-3">
+            <span className="text-sm font-semibold text-slate-400 mr-2">
+              Wyloty:
             </span>
             {filters.departure_cities.map((c) => {
               const active = departureCities.includes(c);
@@ -419,10 +369,10 @@ export default function Home() {
                 <button
                   key={c}
                   type="button"
-                  className={`rounded-xl px-4 py-2 text-sm font-bold transition-all backdrop-blur-md ${
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
                     active
-                      ? "bg-cyan-500 text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105"
-                      : "border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+                      ? "bg-cyan-500 text-[#0f172a]"
+                      : "bg-[#0f172a] text-slate-300 hover:bg-slate-800"
                   }`}
                   onClick={() =>
                     setDepartureCities((prev) =>
@@ -436,55 +386,45 @@ export default function Home() {
             })}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 border-t border-white/10 pt-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 border-t border-white/5 pt-3">
             <input
               placeholder="Min nocy"
-              className={glassInputClass}
+              className={inputClass}
               value={nightsMin}
               onChange={(e) => setNightsMin(e.target.value.replace(/\D/g, ""))}
             />
             <input
               placeholder="Max nocy"
-              className={glassInputClass}
+              className={inputClass}
               value={nightsMax}
               onChange={(e) => setNightsMax(e.target.value.replace(/\D/g, ""))}
             />
             <input
               placeholder="Max cena"
-              className={glassInputClass}
+              className={inputClass}
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value.replace(/\D/g, ""))}
             />
             <select
-              className={`${glassInputClass} appearance-none`}
+              className={`${inputClass} appearance-none`}
               value={sort}
               onChange={(e) => setSort(e.target.value)}
             >
-              <option value="price" className="bg-slate-900">
-                Cena
-              </option>
-              <option value="rating" className="bg-slate-900">
-                Ocena
-              </option>
-              <option value="newest" className="bg-slate-900">
-                Najnowsze
-              </option>
+              <option value="price">Cena</option>
+              <option value="rating">Ocena</option>
+              <option value="newest">Najnowsze</option>
             </select>
             <select
-              className={`${glassInputClass} appearance-none`}
+              className={`${inputClass} appearance-none`}
               value={order}
               onChange={(e) => setOrder(e.target.value)}
             >
-              <option value="asc" className="bg-slate-900">
-                Rosnąco
-              </option>
-              <option value="desc" className="bg-slate-900">
-                Malejąco
-              </option>
+              <option value="asc">Rosnąco</option>
+              <option value="desc">Malejąco</option>
             </select>
             <button
               onClick={load}
-              className="rounded-2xl bg-white text-black font-black transition-all hover:bg-cyan-400 hover:scale-105 shadow-xl w-full h-full min-h-[48px]"
+              className="rounded-xl bg-cyan-500 text-[#0f172a] font-black transition-colors hover:bg-cyan-400 h-full min-h-[42px]"
             >
               Szukaj
             </button>
@@ -494,24 +434,24 @@ export default function Home() {
         {/* Results Grid */}
         <div>
           {error && (
-            <div className="py-20 text-center text-slate-400">{error}</div>
+            <div className="py-12 text-center text-slate-400">{error}</div>
           )}
 
           {loading && (
-            <div className="flex animate-pulse py-32 items-center justify-center space-x-3">
-              <div className="h-4 w-4 rounded-full bg-cyan-400"></div>
-              <div className="h-4 w-4 rounded-full bg-indigo-400"></div>
-              <div className="h-4 w-4 rounded-full bg-emerald-400"></div>
+            <div className="flex animate-pulse py-20 items-center justify-center space-x-2">
+              <div className="h-3 w-3 rounded-full bg-cyan-500"></div>
+              <div className="h-3 w-3 rounded-full bg-slate-500"></div>
+              <div className="h-3 w-3 rounded-full bg-slate-600"></div>
             </div>
           )}
 
           {!loading && !error && offers.length === 0 && (
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 py-24 text-center backdrop-blur-md">
-              <p className="mb-6 text-lg text-slate-300">
+            <div className="rounded-3xl border border-white/5 bg-[#1e293b]/30 py-16 text-center">
+              <p className="mb-4 text-sm text-slate-400">
                 Brak ofert spełniających kryteria.
               </p>
               <button
-                className="rounded-xl bg-white/10 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/20"
+                className="rounded-lg bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 border border-white/10"
                 onClick={clearFilters}
               >
                 Wyczyść filtry
@@ -520,7 +460,7 @@ export default function Home() {
           )}
 
           {!loading && offers.length > 0 && (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-6">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {offers.map((o) => (
                 <OfferCard key={o.id} o={o} />
               ))}
