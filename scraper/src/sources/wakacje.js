@@ -12,7 +12,8 @@ const {
 
 const NAME = 'wakacje';
 
-// Destination subpages keep things focused and paginate 100 offers at a time.
+// Destination subpages paginate 100 offers at a time; single offers load
+// in-place after scrolling. Each destination also pages via ?str-N (1..100).
 const WAKACJE_URLS = [
   'https://www.wakacje.pl/lastminute/turcja/',
   'https://www.wakacje.pl/lastminute/egipt/',
@@ -23,6 +24,8 @@ const WAKACJE_URLS = [
   'https://www.wakacje.pl/lastminute/cypr/',
   'https://www.wakacje.pl/lastminute/tunezja/',
 ];
+
+const WAKACJE_MAX_PAGES = 24;
 
 // given img[alt] (hotel), find the enclosing offer card that carries full text + link
 function findCard(img) {
@@ -150,10 +153,21 @@ async function scrapeWakacje() {
   const all = [];
   try {
     for (const url of WAKACJE_URLS) {
+      const seen = new Set();
       try {
-        const offers = await scrapeDestination(page, url);
-        console.log(`  [wakacje] ${url.split('/')[4]} -> ${offers.length} ofert`);
-        all.push(...offers);
+        for (let p = 1; p <= WAKACJE_MAX_PAGES; p++) {
+          const pageUrl = p === 1 ? url : `${url}?str-${p}`;
+          const offers = await scrapeDestination(page, pageUrl);
+          const fresh = offers.filter((o) => {
+            if (seen.has(o.source_id)) return false;
+            seen.add(o.source_id);
+            return true;
+          });
+          all.push(...fresh);
+          console.log(`  [wakacje] ${url.split('/')[4]} strona ${p} -> +${fresh.length} (łącznie ${seen.size})`);
+          // koniec paginacji — strona pusta lub bez nowych ofert
+          if (offers.length === 0 || fresh.length === 0) break;
+        }
       } catch (e) {
         console.log(`  [wakacje] błąd dla ${url}: ${e.message}`);
       }

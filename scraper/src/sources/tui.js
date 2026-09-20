@@ -14,6 +14,7 @@ const {
 const NAME = 'tui';
 
 // TUI exposes per-destination "oferty-last-minute" pages from its menu.
+// Each destination paginates via ?page=N (observed up to 20+ pages).
 const TUI_URLS = [
   'https://www.tui.pl/wypoczynek/turcja/oferty-last-minute',
   'https://www.tui.pl/wypoczynek/grecja/oferty-last-minute',
@@ -23,7 +24,12 @@ const TUI_URLS = [
   'https://www.tui.pl/wypoczynek/wyspy-kanaryjskie/oferty-last-minute',
   'https://www.tui.pl/wypoczynek/cypr/oferty-last-minute',
   'https://www.tui.pl/wypoczynek/tunezja/oferty-last-minute',
+  'https://www.tui.pl/wypoczynek/dominikana/oferty-last-minute',
+  'https://www.tui.pl/wypoczynek/meksyk/oferty-last-minute',
+  'https://www.tui.pl/wypoczynek/zanzibar/oferty-last-minute',
 ];
+
+const TUI_MAX_PAGES = 12;
 
 function cleanTitle(raw) {
   if (!raw) return 'Brak nazwy';
@@ -159,10 +165,21 @@ async function scrapeTui() {
   const all = [];
   try {
     for (const url of TUI_URLS) {
+      const seen = new Set();
       try {
-        const offers = await scrapeSingleDestination(page, url);
-        console.log(`  [tui] ${url.split('/')[4]} -> ${offers.length} ofert`);
-        all.push(...offers);
+        for (let p = 1; p <= TUI_MAX_PAGES; p++) {
+          const pageUrl = p === 1 ? url : `${url}?page=${p}`;
+          const offers = await scrapeSingleDestination(page, pageUrl);
+          const fresh = offers.filter((o) => {
+            if (seen.has(o.source_id)) return false;
+            seen.add(o.source_id);
+            return true;
+          });
+          all.push(...fresh);
+          console.log(`  [tui] ${url.split('/')[4]} strona ${p} -> +${fresh.length} (łącznie ${seen.size})`);
+          // brak nowych ofert = koniec paginacji
+          if (fresh.length === 0 || offers.length === 0) break;
+        }
       } catch (e) {
         console.log(`  [tui] błąd dla ${url}: ${e.message}`);
       }
@@ -173,4 +190,4 @@ async function scrapeTui() {
   return all;
 }
 
-module.exports = { NAME, scrapeTui };
+module.exports = { NAME, scrapeTui, scrapeSingleDestination };

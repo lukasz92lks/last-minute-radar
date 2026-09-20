@@ -14,7 +14,7 @@ const NAME = 'rainbow';
 
 // Rainbow last-minute listing. Each offer card is wrapped by <a class="n-bloczek szukaj-bloczki__element">.
 // The listing paginates via ?strona=N (default page shows 10 recommended cards).
-const MAX_PAGES = 30;
+const MAX_PAGES = 80;
 
 async function scrapeRainbow() {
   const { browser, context } = await newContext({ viewport: { width: 1366, height: 2400 } });
@@ -68,7 +68,14 @@ async function scrapeRainbow() {
       }
       console.log(`  [rainbow] strona ${p}: ${cards.length} kart (+${newCount} nowych)`);
 
-      if (cards.length === 0) break;
+      if (cards.length === 0) {
+        console.log('  [rainbow] pusta strona — koniec paginacji');
+        break;
+      }
+      if (newCount === 0 && p > 2) {
+        console.log('  [rainbow] brak nowych ofert — koniec paginacji');
+        break;
+      }
       if (p >= MAX_PAGES) console.log(`  [rainbow] osiągnięto limit stron (${MAX_PAGES})`);
     }
 

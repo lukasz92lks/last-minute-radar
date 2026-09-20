@@ -6,10 +6,10 @@ const { scrapeRainbow } = require('./sources/rainbow');
 const { scrapeWakacje } = require('./sources/wakacje');
 
 const SOURCES = [
-  { name: 'itaka', run: scrapeItaka, timeoutMs: 180000 },
-  { name: 'tui', run: scrapeTui, timeoutMs: 600000 },
-  { name: 'rainbow', run: scrapeRainbow, timeoutMs: 600000 },
-  { name: 'wakacje', run: scrapeWakacje, timeoutMs: 480000 },
+  { name: 'itaka', run: scrapeItaka, timeoutMs: 420000 },
+  { name: 'tui', run: scrapeTui, timeoutMs: 1200000 },
+  { name: 'rainbow', run: scrapeRainbow, timeoutMs: 1200000 },
+  { name: 'wakacje', run: scrapeWakacje, timeoutMs: 1200000 },
 ];
 
 function withTimeout(fn, ms) {
@@ -33,10 +33,14 @@ async function runAll() {
       const n = await upsertOffers(offers);
       total += n;
       console.log(`[${src.name}] zapisano ${n} ofert`);
-      // Remove offers from this source that are no longer in the listings
-      // (not seen within the last 6h).
-      const pruned = await pruneOffers([src.name], 6);
-      if (pruned) console.log(`[${src.name}] usunięto ${pruned} nieaktualnych ofert`);
+      if (offers.length === 0) {
+        console.log(`[${src.name}] 0 ofert — TRAKTUJĘ JAKO BŁĄD, pomijam prune`);
+      } else {
+        // Remove offers from this source that are no longer in the listings
+        // (not seen within the last 6h).
+        const pruned = await pruneOffers([src.name], 6);
+        if (pruned) console.log(`[${src.name}] usunięto ${pruned} nieaktualnych ofert`);
+      }
     } catch (e) {
       console.error(`[${src.name}] BŁĄD:`, e.message);
     }
