@@ -7,8 +7,10 @@ const {
   extractMeal,
   extractDateRange,
   extractDepartureCity,
+  normalizeCountry,
   normalizeMeal,
 } = require('../parse');
+const { fetchStarsMap } = require('../../../api/src/db');
 
 const NAME = 'wakacje';
 
@@ -26,6 +28,14 @@ const WAKACJE_URLS = [
 ];
 
 const WAKACJE_MAX_PAGES = 24;
+
+// Hotel category stars are NOT shown on listing tiles (only the opinion rating).
+// We grab them from the offer detail page once per hotel and cache in the DB via
+// fetchStarsMap (key wakacje|hotel_name). Bound detail visits per run so the GH
+// job stays within limits; new hotels get backfilled in later runs.
+const MAX_STARS_VISITS = process.env.WAKACJE_STARS_CAP
+  ? parseInt(process.env.WAKACJE_STARS_CAP, 10)
+  : 150;
 
 // given img[alt] (hotel), find the enclosing offer card that carries full text + link
 function findCard(img) {
@@ -81,7 +91,8 @@ async function scrapeDestination(page, url) {
         const text = (card.innerText || '').replace(/\s+/g, ' ').trim();
         if (!/zł/i.test(text)) continue;
         const href = card.querySelector('a[href]')?.getAttribute('href') || '';
-        out.push({ hotel: alt, text, href });
+        const imgSrc = img.getAttribute('src') || img.getAttribute('data-src') || null;
+        out.push({ hotel: alt, text, href, imgSrc });
         if (out.length >= 40) break;
       }
       return out;
@@ -118,11 +129,15 @@ async function scrapeDestination(page, url) {
     const reviews = extractReviews(tx);
     const price = extractPrice(tx) || extractPriceFromZa(tx);
 
+    const destinationCountry = destination ? destination.split('/')[0].trim() : null;
+
     result.push({
       source: NAME,
       source_id: c.href || `wakacje:${c.hotel}:${startISO}`,
       hotel_name: c.hotel,
       destination,
+      country: destinationCountry ? normalizeCountry(destinationCountry) : null,
+      image_url: c.imgSrc || null,
       departure_city: departure,
       price_per_person: price ? normalizeNumber(price) : null,
       currency: 'PLN',
@@ -145,6 +160,62 @@ async function scrapeDestination(page, url) {
 function extractPriceFromZa(text) {
   const m = text.match(/od\s*(\d{1,4}(?:[ \u00A0.]\d{3})*)\s*zł\s*za\s*wszystkich/i);
   return m ? m[1] : null;
+}
+
+// Parse hotel category stars from an offer detail page (text "Kategoria hotelu ... 5").
+async function fetchStarsFromDetail(page, url) {
+  try {
+    await page.goto(url, { waitUntil: 'load', timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(1500);
+    const stars = await page.evaluate(() => {
+      const body = document.body.innerText || '';
+      const m =
+        body.match(/Kategoria\s+hotelu[^0-9]{0,40}(\d+)/i) ||
+        body.match(/Kategoria\s+lokalna[^0-9]{0,40}(\d+)/i);
+      return m ? parseInt(m[1], 10) : null;
+    });
+    return stars && stars > 0 && stars <= 8 ? stars : null;
+  } catch {
+    return null;
+  }
+}
+
+// Enrich offers with hotel category stars. Reuses the DB cache; new hotels are
+// visited (capped) and the result is applied so upsert persists it for next runs.
+async function enrichStars(page, offers, maxVisits = MAX_STARS_VISITS) {
+  const known = await fetchStarsMap().catch(() => new Map());
+  const hotelToStars = new Map();
+  const visits = [];
+
+  for (const o of offers) {
+    const key = `wakacje|${o.hotel_name}`;
+    if (known.has(key)) {
+      hotelToStars.set(o.hotel_name, known.get(key));
+      continue;
+    }
+    if (!o.url || hotelToStars.has(o.hotel_name)) continue;
+    hotelToStars.set(o.hotel_name, null); // placeholder, try once per hotel
+    if (visits.length < maxVisits) visits.push(o);
+  }
+
+  let ok = 0;
+  for (const o of visits) {
+    const stars = await fetchStarsFromDetail(page, o.url);
+    if (stars) hotelToStars.set(o.hotel_name, stars);
+    if (stars) ok++;
+    console.log(`  [wakacje] gwiazdki: ${o.hotel_name} -> ${stars || '?'} (${ok}/${visits.length})`);
+  }
+
+  let enriched = 0;
+  for (const o of offers) {
+    const s = hotelToStars.get(o.hotel_name);
+    if (s) {
+      o.stars = s;
+      enriched++;
+    }
+  }
+  console.log(`  [wakacje] gwiazdki: ${enriched}/${offers.length} ofert zaopatrzonych`);
+  return hotelToStars;
 }
 
 async function scrapeWakacje() {
@@ -172,10 +243,12 @@ async function scrapeWakacje() {
         console.log(`  [wakacje] błąd dla ${url}: ${e.message}`);
       }
     }
+    // hotel category stars come from detail pages — visit a bounded set once
+    if (all.length) await enrichStars(page, all);
   } finally {
     await browser.close();
   }
   return all;
 }
 
-module.exports = { NAME, scrapeWakacje, scrapeDestination };
+module.exports = { NAME, scrapeWakacje, scrapeDestination, enrichStars, fetchStarsFromDetail };
