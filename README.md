@@ -142,11 +142,11 @@ Parametry `GET /api/offers`:
 - **Rainbow (r.pl)** — pełna lista przez paginację `?strona=N` (limit ~30 stron); zdjęcie i ocena
   gości z karty. Gwiazdki hotelu pobierane ze strony oferty jako sekcja **"Kategoria lokalna"**
   (liczba `*` jak `***` = 3, a słownie np. „Trzy klucze”), również z cache w bazie.
-- **Wakacje.pl** — mocna ochrona anty-bot, bywa niestabilna. **Domyślnie wyłączona**:
-
-  ```bash
-  SCRAPE_WAKACJE=1 node scraper/src/index.js --once
-  ```
+- **Wakacje.pl** — mocna ochrona anty-bot, bywa niestabilna. Gwiazdki hotelu
+  (kategoria) i porządne zdjęcie pobierane są ze strony oferty — jedna wizyta daje
+  **i gwiazdki, i zdjęcie**, z cache w bazie (`wakacje|hotel_name`) i limitem wizyt
+  na rundę (`WAKACJE_STARS_CAP`, domyślnie 150). Zdjęcie z kafelka służy jako
+  fallback uzupełniany ze strony szczegółów.
 
 ### Uwagi prawne / etyczne
 

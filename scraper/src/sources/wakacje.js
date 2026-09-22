@@ -29,10 +29,11 @@ const WAKACJE_URLS = [
 
 const WAKACJE_MAX_PAGES = 24;
 
-// Hotel category stars are NOT shown on listing tiles (only the opinion rating).
-// We grab them from the offer detail page once per hotel and cache in the DB via
-// fetchStarsMap (key wakacje|hotel_name). Bound detail visits per run so the GH
-// job stays within limits; new hotels get backfilled in later runs.
+// Hotel category stars are NOT shown on listing tiles (only the opinion rating),
+// and tile photos are lazy-loaded/not always reliable. For offers that still miss
+// stars or an image we visit the detail page and pull BOTH in one go, cached in
+// the DB (key wakacje|hotel_name). Bound detail visits per run so the GH job
+// stays within limits; new hotels get backfilled in later runs.
 const MAX_STARS_VISITS = process.env.WAKACJE_STARS_CAP
   ? parseInt(process.env.WAKACJE_STARS_CAP, 10)
   : 150;
@@ -91,7 +92,19 @@ async function scrapeDestination(page, url) {
         const text = (card.innerText || '').replace(/\s+/g, ' ').trim();
         if (!/zł/i.test(text)) continue;
         const href = card.querySelector('a[href]')?.getAttribute('href') || '';
-        const imgSrc = img.getAttribute('src') || img.getAttribute('data-src') || null;
+        // lazy-loaded tile images hide the real URL in data-*/srcset attrs
+        const imgSrc = (() => {
+          for (const attr of ['data-src', 'data-lazy-src', 'data-original', 'data-url', 'data-srcset', 'srcset', 'src']) {
+            const v = img.getAttribute(attr);
+            if (!v) continue;
+            const first = v.trim().split(',')[0].trim().split(/[ \t]/)[0];
+            if (/^https?:\/\//i.test(first) || first.startsWith('/')) {
+              if (/\/static\/|placeholder|no.?photo|\bblank\b|1x1|pixel|logo/i.test(first)) continue;
+              return first;
+            }
+          }
+          return null;
+        })();
         out.push({ hotel: alt, text, href, imgSrc });
         if (out.length >= 40) break;
       }
@@ -162,60 +175,116 @@ function extractPriceFromZa(text) {
   return m ? m[1] : null;
 }
 
-// Parse hotel category stars from an offer detail page (text "Kategoria hotelu ... 5").
-async function fetchStarsFromDetail(page, url) {
+// Normalize a wakacje.pl CDN image URL to a card-friendly size.
+function normalizeWakacjeImage(url) {
+  if (!url) return null;
+  return url
+    .replace(/-\d+x\d+\.(jpe?g|png|webp)$/i, '-343-228.$1')
+    .replace(/-\d+-\d+\.(jpe?g|png|webp)$/i, '-343-228.$1');
+}
+
+// Visit an offer detail page and pull BOTH the hotel category stars and the main
+// hotel photo in a single navigation. Returns { stars, image }.
+async function fetchDetailFromPage(page, url) {
   try {
     await page.goto(url, { waitUntil: 'load', timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1500);
-    const stars = await page.evaluate(() => {
+    const info = await page.evaluate(() => {
       const body = document.body.innerText || '';
       const m =
         body.match(/Kategoria\s+hotelu[^0-9]{0,40}(\d+)/i) ||
         body.match(/Kategoria\s+lokalna[^0-9]{0,40}(\d+)/i);
-      return m ? parseInt(m[1], 10) : null;
+      let stars = m ? parseInt(m[1], 10) : null;
+      if (!stars || stars <= 0 || stars > 8) stars = null;
+
+      const og = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+      let image = og || null;
+      if (!image) {
+        const img = [...document.querySelectorAll('img[src*="i.wakacje.pl"]')].find(
+          (i) => !/menu-widget|\/static\//.test((i.getAttribute('src') || i.getAttribute('data-src') || ''))
+        );
+        image = (img && (img.getAttribute('src') || img.getAttribute('data-src'))) || null;
+      }
+      return { stars, image };
     });
-    return stars && stars > 0 && stars <= 8 ? stars : null;
+    return { stars: info.stars, image: normalizeWakacjeImage(info.image) };
   } catch {
-    return null;
+    return { stars: null, image: null };
   }
 }
 
-// Enrich offers with hotel category stars. Reuses the DB cache; new hotels are
-// visited (capped) and the result is applied so upsert persists it for next runs.
-async function enrichStars(page, offers, maxVisits = MAX_STARS_VISITS) {
+// Legacy convenience wrapper used by probe/backfill scripts.
+async function fetchStarsFromDetail(page, url) {
+  return (await fetchDetailFromPage(page, url)).stars;
+}
+
+// Enrich offers with hotel category stars AND hotel photos from detail pages.
+// Stars are reused from the DB cache; each hotel missing stars or an image gets
+// exactly one detail-page visit (capped per run) that extracts both at once.
+async function enrichFromDetails(page, offers, maxVisits = MAX_STARS_VISITS) {
   const known = await fetchStarsMap().catch(() => new Map());
-  const hotelToStars = new Map();
-  const visits = [];
-
+  const perHotel = new Map();
   for (const o of offers) {
-    const key = `wakacje|${o.hotel_name}`;
-    if (known.has(key)) {
-      hotelToStars.set(o.hotel_name, known.get(key));
-      continue;
+    const key = o.hotel_name;
+    if (!perHotel.has(key)) {
+      perHotel.set(key, {
+        url: o.url,
+        offers: [],
+        haveStars: known.has(`wakacje|${key}`),
+        haveImg: Boolean(o.image_url),
+      });
     }
-    if (!o.url || hotelToStars.has(o.hotel_name)) continue;
-    hotelToStars.set(o.hotel_name, null); // placeholder, try once per hotel
-    if (visits.length < maxVisits) visits.push(o);
+    const slot = perHotel.get(key);
+    if (!slot.url && o.url) slot.url = o.url;
+    slot.haveStars = slot.haveStars || known.has(`wakacje|${key}`);
+    slot.haveImg = slot.haveImg || Boolean(o.image_url);
+    slot.offers.push(o);
   }
 
-  let ok = 0;
-  for (const o of visits) {
-    const stars = await fetchStarsFromDetail(page, o.url);
-    if (stars) hotelToStars.set(o.hotel_name, stars);
-    if (stars) ok++;
-    console.log(`  [wakacje] gwiazdki: ${o.hotel_name} -> ${stars || '?'} (${ok}/${visits.length})`);
+  const need = [...perHotel.values()].filter((s) => s.url && (!s.haveStars || !s.haveImg));
+  const visits = need.slice(0, maxVisits);
+  console.log(`  [wakacje] do odwiedzenia: ${need.length} hoteli, ${visits.length} w tej rundzie`);
+
+  let starsOk = 0;
+  let imgOk = 0;
+  for (const slot of visits) {
+    const { stars, image } = await fetchDetailFromPage(page, slot.url);
+    if (stars) {
+      slot.stars = stars;
+      starsOk++;
+    }
+    if (image) {
+      slot.image = image;
+      imgOk++;
+    }
+    const hotel = slot.offers[0].hotel_name;
+    console.log(`  [wakacje] detal: ${hotel} -> gwiazdki ${stars || '?'}, zdjęcie ${image ? 'tak' : 'nie'} (${starsOk}/${imgOk})`);
   }
 
-  let enriched = 0;
+  // stale stars from the DB cache apply to every offer, even those not visited
   for (const o of offers) {
-    const s = hotelToStars.get(o.hotel_name);
-    if (s) {
-      o.stars = s;
-      enriched++;
+    const cached = known.get(`wakacje|${o.hotel_name}`);
+    if (cached) o.stars = cached;
+  }
+
+  let starsEnriched = 0;
+  let imgEnriched = 0;
+  for (const slot of perHotel.values()) {
+    if (slot.stars) {
+      for (const o of slot.offers) {
+        o.stars = slot.stars;
+        starsEnriched++;
+      }
+    }
+    if (slot.image) {
+      for (const o of slot.offers) {
+        if (!o.image_url) o.image_url = slot.image;
+        imgEnriched++;
+      }
     }
   }
-  console.log(`  [wakacje] gwiazdki: ${enriched}/${offers.length} ofert zaopatrzonych`);
-  return hotelToStars;
+  console.log(`  [wakacje] gwiazdki: ${starsEnriched}/${offers.length} ofert, zdjęcia uzupełnione: ${imgEnriched}`);
+  return perHotel;
 }
 
 async function scrapeWakacje() {
@@ -243,12 +312,12 @@ async function scrapeWakacje() {
         console.log(`  [wakacje] błąd dla ${url}: ${e.message}`);
       }
     }
-    // hotel category stars come from detail pages — visit a bounded set once
-    if (all.length) await enrichStars(page, all);
+    // hotel category stars + photos come from detail pages — visit a bounded set once
+    if (all.length) await enrichFromDetails(page, all);
   } finally {
     await browser.close();
   }
   return all;
 }
 
-module.exports = { NAME, scrapeWakacje, scrapeDestination, enrichStars, fetchStarsFromDetail };
+module.exports = { NAME, scrapeWakacje, scrapeDestination, enrichFromDetails, fetchStarsFromDetail, fetchDetailFromPage, normalizeWakacjeImage };
